@@ -100,8 +100,13 @@ export default function ReservationForm() {
     if (serviceId && templateId && publicKey) {
       try {
         const templateParams = {
-          to_name: 'Baraa Restaurant Admin',
           customer_name: name,
+          phone_number: paymentNumber,
+          location: 'Baraa Restaurant Table Reservation',
+          order_details: `Table reservation for ${guests} guests on ${date} at ${time}. Code: ${bookingCode}`,
+          total_price: '$0.00',
+
+          to_name: 'Baraa Restaurant Admin',
           guests_count: guests,
           booking_date: date,
           booking_time: time,
@@ -113,10 +118,12 @@ export default function ReservationForm() {
           admin_email: 'maankacom66@gmail.com'
         };
 
-        await emailjs.send(serviceId, templateId, templateParams, publicKey);
+        console.log("Sending Reservation EmailJS with params:", templateParams);
+        const res = await emailjs.send(serviceId, templateId, templateParams, publicKey);
+        console.log("Reservation EmailJS Result:", res);
         setEmailStatus('success');
       } catch (error) {
-        console.error('EmailJS Send Error:', error);
+        console.error('EmailJS Send Error Details:', error);
         setEmailStatus('error');
       }
     } else {

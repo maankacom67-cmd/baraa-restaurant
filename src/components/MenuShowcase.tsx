@@ -211,24 +211,29 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
     const templateId = "template_mo42cxc";
     const publicKey = "user_fElg0MmaVdQdzy1yR";
 
+    const formattedTotal = typeof totalAmount === 'number' ? `$${totalAmount.toFixed(2)}` : totalAmount;
+
     // Diyaarinta fariinta loo dirayo EmailJS (templateParams)
     const templateParams = {
-      // Direct requested fields
+      // 1. Direct requested template fields
       customer_name: customerName || 'Macmiil',
-      phone: customerPhone,
-      items: itemsBrief || fullCunnooyinHTML,
-      total: typeof totalAmount === 'number' ? `$${totalAmount.toFixed(2)}` : totalAmount,
+      phone_number: customerPhone || 'Aan la sheegin',
+      location: finalAddress || 'Aan la sheegin',
+      order_details: itemsBrief || itemsDescription || fullCunnooyinHTML,
+      total_price: formattedTotal,
 
-      // Somali & alternative template support
+      // 2. Additional common field aliases for maximum template compatibility
+      phone: customerPhone,
+      items: itemsBrief || itemsDescription || fullCunnooyinHTML,
+      total: formattedTotal,
       magaca: customerName || 'Macmiil',
       teleefonka: customerPhone,
-      location: finalAddress,
       habka_dalabka: orderType === 'takeaway' ? 'Maqaayada ayaan imaanayaa (Takeaway)' : 'Waa lay keenayaa (Home Delivery)',
       lacag_bixinta: paymentMethod,
-      subtotal: typeof totalAmount === 'number' ? `$${totalAmount.toFixed(2)}` : totalAmount,
+      subtotal: formattedTotal,
       cunnooyinka_la_dalbaday: fullCunnooyinHTML,
 
-      // Generic EmailJS fields
+      // 3. Generic EmailJS fields
       name: customerName || 'Macmiil',
       email: customerPhone,
       title: `Cunto Dalab - ${finalAddress}`,
@@ -247,7 +252,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       delivery_address: finalAddress,
       item_name: itemsBrief,
       quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
-      total_amount: typeof totalAmount === 'number' ? `$${totalAmount.toFixed(2)}` : totalAmount,
+      total_amount: formattedTotal,
       payment_method: paymentMethod,
       booking_code: orderCode,
       special_requests: cartNotes || 'Ma jiraan codsiyo gaar ah',
@@ -257,7 +262,9 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
 
     if (serviceId && templateId && publicKey) {
       try {
-        await emailjs.send(serviceId, templateId, templateParams, publicKey);
+        console.log("Sending EmailJS with serviceId:", serviceId, "templateId:", templateId, "publicKey:", publicKey, "params:", templateParams);
+        const result = await emailjs.send(serviceId, templateId, templateParams, publicKey);
+        console.log("EmailJS Send Success Result:", result);
         setOrderEmailStatus('success');
 
         // Alert success
@@ -267,7 +274,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
         const roundedAmount = Math.round(totalAmount) || 1;
         window.location.href = `tel:*712*771909054*${roundedAmount}%23`;
       } catch (error) {
-        console.error('EmailJS Order Send Error:', error);
+        console.error('EmailJS Order Send Error Details:', error);
         setOrderEmailStatus('error');
         // Fallback alert and action if email fails
         const roundedAmount = Math.round(totalAmount) || 1;
