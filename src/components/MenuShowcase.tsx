@@ -263,7 +263,11 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
     if (serviceId && templateId && publicKey) {
       try {
         console.log("Sending EmailJS with serviceId:", serviceId, "templateId:", templateId, "publicKey:", publicKey, "params:", templateParams);
-        const result = await emailjs.send(serviceId, templateId, templateParams, publicKey);
+        
+        // Initialize EmailJS for v4 compatibility
+        emailjs.init({ publicKey });
+
+        const result = await emailjs.send(serviceId, templateId, templateParams, { publicKey });
         console.log("EmailJS Send Success Result:", result);
         setOrderEmailStatus('success');
 
@@ -273,8 +277,8 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
         // Toos ugu wareeji garaaca taleefonka (Call Phone) qaabka USSD-ka ah (*712*771909054*lacagta#)
         const roundedAmount = Math.round(totalAmount) || 1;
         window.location.href = `tel:*712*771909054*${roundedAmount}%23`;
-      } catch (error) {
-        console.error('EmailJS Order Send Error Details:', error);
+      } catch (error: any) {
+        console.error('EmailJS Order Send Error Details:', error?.text || error?.message || error);
         setOrderEmailStatus('error');
         // Fallback alert and action if email fails
         const roundedAmount = Math.round(totalAmount) || 1;

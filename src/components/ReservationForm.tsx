@@ -119,7 +119,8 @@ export default function ReservationForm() {
         };
 
         console.log("Sending Reservation EmailJS with params:", templateParams);
-        const res = await emailjs.send(serviceId, templateId, templateParams, publicKey);
+        emailjs.init({ publicKey });
+        const res = await emailjs.send(serviceId, templateId, templateParams, { publicKey });
         console.log("Reservation EmailJS Result:", res);
         setEmailStatus('success');
       } catch (error) {
