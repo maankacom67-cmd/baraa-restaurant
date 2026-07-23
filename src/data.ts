@@ -1,5 +1,6 @@
 import { MenuItem, Category, Review, Chef } from './types';
 import qudaarDiyaarImg from './assets/images/qudaar_diyaar_ah_1784846895894.jpg';
+import pizzaDeluxeImg from './assets/images/pizza_deluxe_1784848355949.jpg';
 
 export const CATEGORIES: Category[] = [
   { key: 'all', label: 'Dhammaan', icon: 'Utensils' },
@@ -83,6 +84,18 @@ export const MENU_ITEMS: MenuItem[] = [
     imageUrl: qudaarDiyaarImg,
     tags: ['Miro Dabiici ah', 'Vegan', 'Caafimaad'],
     rating: 4.9
+  },
+  {
+    id: 'main-5',
+    name: 'Pizza Deluxe (Pitsa Cusub)',
+    description: 'Pitsa cusub oo aad u macaan oo lagu diyaariyay jiis dhalaalaya (Mozzarella), Babarooni, Basbaas berri ah, Zaytuun madow, iyo boqosha (Mushrooms) oo si gaar ah foornada loogu dubay.',
+    price: 6.50,
+    category: 'main',
+    imageUrl: pizzaDeluxeImg,
+    tags: ['Pizza', 'Cheese', 'Cusub', 'Hot & Fresh'],
+    isPopular: true,
+    isFeatured: true,
+    rating: 5.0
   },
   {
     id: 'drink-1',
