@@ -206,26 +206,31 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       cartNotes: cartNotes || 'Ma jiraan codsiyo gaar ah'
     };
 
-    // EmailJS credentials hardcoded as string literals (with env fallback) for Netlify compatibility
-    const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
-    const serviceId = metaEnv.VITE_EMAILJS_SERVICE_ID || "service_baraa_restaurant";
-    const templateId = metaEnv.VITE_EMAILJS_TEMPLATE_ID || "template_baraa_order";
-    const publicKey = metaEnv.VITE_EMAILJS_PUBLIC_KEY || "public_key_baraa_123";
+    // EmailJS credentials hardcoded as requested (using emailjs.send)
+    const serviceId = "service_9ufa6x1";
+    const templateId = "template_mo42cxc";
+    const publicKey = "user_fElg0MmaVdQdzy1yR";
 
-    // Diyaarinta fariinta loo dirayo EmailJS (Iyadoo la isticmaalayo furayaasha cusub iyo kuwii hore labadaba si loo hubsado)
+    // Diyaarinta fariinta loo dirayo EmailJS (templateParams)
     const templateParams = {
-      // New Somali-keyed template parameters requested
+      // Direct requested fields
+      customer_name: customerName || 'Macmiil',
+      phone: customerPhone,
+      items: itemsBrief || fullCunnooyinHTML,
+      total: typeof totalAmount === 'number' ? `$${totalAmount.toFixed(2)}` : totalAmount,
+
+      // Somali & alternative template support
       magaca: customerName || 'Macmiil',
       teleefonka: customerPhone,
       location: finalAddress,
       habka_dalabka: orderType === 'takeaway' ? 'Maqaayada ayaan imaanayaa (Takeaway)' : 'Waa lay keenayaa (Home Delivery)',
       lacag_bixinta: paymentMethod,
-      subtotal: totalAmount.toFixed(2),
+      subtotal: typeof totalAmount === 'number' ? `$${totalAmount.toFixed(2)}` : totalAmount,
       cunnooyinka_la_dalbaday: fullCunnooyinHTML,
 
-      // Backwards/Alternative template support for existing structures
-      name: `Dalab Cusub (${paymentMethod}) - ${orderType === 'takeaway' ? 'Maqaayada' : 'Keenis'}`,
-      email: customerPhone, // Lambarka macmiilka
+      // Generic EmailJS fields
+      name: customerName || 'Macmiil',
+      email: customerPhone,
       title: `Cunto Dalab - ${finalAddress}`,
       message: `
         📍 Nooca Dalabka: ${orderType === 'takeaway' ? 'Maqaayada ayaan imaanayaa (Takeaway)' : 'Waa lay keenayaa (Home Delivery)'}
@@ -238,13 +243,11 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
         💳 Habka Lacagta: ${paymentMethod}
       `,
       to_name: 'Baraa Restaurant Admin',
-      customer_name: customerName || 'Macmiil',
       customer_phone: customerPhone,
       delivery_address: finalAddress,
       item_name: itemsBrief,
-      item_price: '',
       quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
-      total_amount: totalAmount.toFixed(2),
+      total_amount: typeof totalAmount === 'number' ? `$${totalAmount.toFixed(2)}` : totalAmount,
       payment_method: paymentMethod,
       booking_code: orderCode,
       special_requests: cartNotes || 'Ma jiraan codsiyo gaar ah',
@@ -257,25 +260,19 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
         await emailjs.send(serviceId, templateId, templateParams, publicKey);
         setOrderEmailStatus('success');
 
-        // 2. Alert success
-        alert("Dalabkaaga waa la diray! Hada waxaa laguu wareejinayaa bixinta lacagta...");
+        // Alert success
+        alert("Dalabkaaga si guul leh ayaa loo diray! Hada waxaa laguu wareejinayaa bixinta lacagta...");
 
-        // 3. Toos ugu wareeji garaaca taleefonka (Call Phone) qaabka USSD-ka ah
-        // Code-ka USSD: *712*771909054*lacagta#
+        // Toos ugu wareeji garaaca taleefonka (Call Phone) qaabka USSD-ka ah (*712*771909054*lacagta#)
         const roundedAmount = Math.round(totalAmount) || 1;
         window.location.href = `tel:*712*771909054*${roundedAmount}%23`;
       } catch (error) {
         console.error('EmailJS Order Send Error:', error);
         setOrderEmailStatus('error');
+        // Fallback alert and action if email fails
+        const roundedAmount = Math.round(totalAmount) || 1;
+        window.location.href = `tel:*712*771909054*${roundedAmount}%23`;
       }
-    } else {
-      console.warn('EmailJS keys are not configured yet for orders.');
-      setOrderEmailStatus('not_configured');
-
-      // Still provide flow in Demo Mode for preview and local testing
-      alert("Dalabkaaga waa la diray (DEMO/TEST MODE)! Hada waxaa laguu wareejinayaa bixinta lacagta...");
-      const roundedAmount = Math.round(totalAmount) || 1;
-      window.location.href = `tel:*712*771909054*${roundedAmount}%23`;
     }
 
     // Save order details to Firebase Firestore (collection: "orders")
