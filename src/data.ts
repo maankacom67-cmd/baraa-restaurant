@@ -1,4 +1,5 @@
 import { MenuItem, Category, Review, Chef } from './types';
+import qudaarDiyaarImg from './assets/images/qudaar_diyaar_ah_1784846895894.jpg';
 
 export const CATEGORIES: Category[] = [
   { key: 'all', label: 'Dhammaan', icon: 'Utensils' },
@@ -75,13 +76,13 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: 'main-4',
-    name: 'Khudaar la Dubay',
-    description: 'Khudaar xilliyeed ah (baradhada, karootada, basasha, iyo basbaaska) oo si tartiib ah loogu dubay saliid saytuun iyo geedo caraf leh.',
-    price: 5.50,
+    name: 'Qudaar diyaar ah',
+    description: 'Miro iyo qudaar dabiici ah oo la saaray saxan qurux badan, oo leh dhamaan miro xilliyeedka dabiiciga ah oo cusub (Moos, Kiwi, Canab, Xabxab, Rummaan, Bartaqaan iyo Cambe).',
+    price: 3.50,
     category: 'main',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDQjgSDQlLTsjKwesrP6MidJUTHR_Kdc4ZDr6eDYKihbyvNxIsNoECb55IwWfYCl_Ykf_qcNgEzGaKSB1R-YVJkyAepyt-3QqCeQYcNcUwerLgsuB2NT2RE9R_F8HQgDVZ-X9b1TcEZLETpfNBOqsCabrXMAUnE7o6wXOzcgNDRER7K52cAdwcSbhs-8GFlCufCfp4fc6xBR-ehalAzrhXoATPzZBmZZPgrL9Fj6Ig9DM3FBxvVEdEhL0j4dHj_aqOPOes',
-    tags: ['Vegan', 'Caafimaad'],
-    rating: 4.4
+    imageUrl: qudaarDiyaarImg,
+    tags: ['Miro Dabiici ah', 'Vegan', 'Caafimaad'],
+    rating: 4.9
   },
   {
     id: 'drink-1',
