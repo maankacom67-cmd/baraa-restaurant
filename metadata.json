@@ -1,0 +1,6 @@
+{
+  "name": "Baraa Restaurant",
+  "description": "Baraa Restaurant - Maqaayada casriga ah ee leh cuntada ugu macaan, jawiga ugu degan, iyo ballansashada miisaska si online ah.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
