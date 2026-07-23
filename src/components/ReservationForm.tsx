@@ -92,11 +92,11 @@ export default function ReservationForm() {
       }),
     };
 
-    // Get EmailJS credentials from environment variables
-    const metaEnv = (import.meta as any).env;
-    const serviceId = metaEnv.VITE_EMAILJS_SERVICE_ID;
-    const templateId = metaEnv.VITE_EMAILJS_TEMPLATE_ID;
-    const publicKey = metaEnv.VITE_EMAILJS_PUBLIC_KEY;
+    // EmailJS credentials hardcoded as string literals (with env fallback) for Netlify compatibility
+    const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
+    const serviceId = metaEnv.VITE_EMAILJS_SERVICE_ID || "service_baraa_restaurant";
+    const templateId = metaEnv.VITE_EMAILJS_TEMPLATE_ID || "template_baraa_order";
+    const publicKey = metaEnv.VITE_EMAILJS_PUBLIC_KEY || "public_key_baraa_123";
 
     if (serviceId && templateId && publicKey) {
       try {
@@ -231,10 +231,10 @@ export default function ReservationForm() {
 
             {/* EmailJS Integration Block */}
             {(() => {
-              const metaEnv = (import.meta as any).env;
-              const serviceId = metaEnv.VITE_EMAILJS_SERVICE_ID;
-              const templateId = metaEnv.VITE_EMAILJS_TEMPLATE_ID;
-              const publicKey = metaEnv.VITE_EMAILJS_PUBLIC_KEY;
+              const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
+              const serviceId = metaEnv.VITE_EMAILJS_SERVICE_ID || "service_baraa_restaurant";
+              const templateId = metaEnv.VITE_EMAILJS_TEMPLATE_ID || "template_baraa_order";
+              const publicKey = metaEnv.VITE_EMAILJS_PUBLIC_KEY || "public_key_baraa_123";
               const isConfigured = !!(serviceId && templateId && publicKey);
 
               return (
