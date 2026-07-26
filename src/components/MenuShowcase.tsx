@@ -206,10 +206,10 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       cartNotes: cartNotes || 'Ma jiraan codsiyo gaar ah'
     };
 
-    // EmailJS credentials (supports environment variables or fallbacks)
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_baraa_smtp";
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_mo42cxc";
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "user_fElg0MmaVdQdzy1yR";
+    // EmailJS credentials hardcoded
+    const serviceId = "service_baraa_smtp";
+    const templateId = "template_mo42cxc";
+    const publicKey = "user_fElg0MmaVdQdzy1yR";
 
     const formattedTotal = typeof totalAmount === 'number' ? `$${totalAmount.toFixed(2)}` : totalAmount;
 
