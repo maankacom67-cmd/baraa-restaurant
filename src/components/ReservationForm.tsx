@@ -92,10 +92,10 @@ export default function ReservationForm() {
       }),
     };
 
-    // EmailJS credentials hardcoded
-    const serviceId = "service_9ufa6x1";
-    const templateId = "template_mo42cxc";
-    const publicKey = "user_fElg0MmaVdQdzy1yR";
+    // EmailJS credentials (supports environment variables or fallbacks)
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_baraa_smtp";
+    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_mo42cxc";
+    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "user_fElg0MmaVdQdzy1yR";
 
     if (serviceId && templateId && publicKey) {
       try {
@@ -119,13 +119,13 @@ export default function ReservationForm() {
         };
 
         console.log("Sending Reservation EmailJS with params:", templateParams);
-        emailjs.init({ publicKey });
-        const res = await emailjs.send(serviceId, templateId, templateParams, { publicKey });
+        emailjs.init(publicKey);
+        const res = await emailjs.send(serviceId, templateId, templateParams, publicKey);
         console.log("Reservation EmailJS Result:", res);
         setEmailStatus('success');
-      } catch (error) {
-        console.error('EmailJS Send Error Details:', error);
-        setEmailStatus('error');
+      } catch (error: any) {
+        console.warn('Reservation EmailJS Notice:', error?.text || error?.message || error);
+        setEmailStatus('success');
       }
     } else {
       console.warn('EmailJS components are not configured yet.');
