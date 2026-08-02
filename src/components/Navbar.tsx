@@ -56,7 +56,7 @@ export default function Navbar({ currentTab, setCurrentTab }: NavbarProps) {
         </button>
 
         {/* Desktop Links */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-4 lg:gap-8">
           {navItems.map((item) => {
             const isActive = currentTab === item.key;
             return (

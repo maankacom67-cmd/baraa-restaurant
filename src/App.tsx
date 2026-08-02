@@ -78,7 +78,7 @@ export default function App() {
                   </div>
 
                   {/* Right Graphics Bento Layout */}
-                  <div className="lg:col-span-7 grid grid-cols-2 gap-4 h-[550px]">
+                  <div className="lg:col-span-7 grid grid-cols-2 gap-3 sm:gap-4 h-[320px] sm:h-[440px] lg:h-[550px]">
                     <div className="relative overflow-hidden rounded-md col-span-1 row-span-2 border border-gray-200 shadow-md group">
                       <img
                         src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzEemIynUqKSJqt2boD0uBdv4JIkCwYKgRJub_bRKHt0aNrMFSAqluj__RNLB9zQESnUTYnw4-WzXiX1KUvqa_mvq0-AxhwO0UWjDXShZ-E63-jt65sPXJ34vda30uCEBnalQwkgd53FdX0D4vJpfyBO4l8dEnUIR4Tsqv6gTCJKMd_4DaoiX8Z37L3LUx8_jPXQrQCd-I74gY6ORvBSKJSURKUAfLd1C9zGlc_wIFibTJupAifpM5dHZQUOjc7Pz6ss0"
