@@ -10,6 +10,7 @@ import ReservationForm from './components/ReservationForm';
 import AboutUs from './components/AboutUs';
 import ReviewsSection from './components/ReviewsSection';
 import BaraaLogo from './components/BaraaLogo';
+import { MENU_ITEMS } from './data';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<'home' | 'menu' | 'about' | 'book' | 'reviews'>('home');
@@ -126,74 +127,40 @@ export default function App() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* Item 1 */}
-                    <div className="bg-white rounded-md overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all p-6 flex flex-col group cursor-pointer" onClick={() => setCurrentTab('menu')}>
-                      <div className="aspect-video overflow-hidden rounded mb-4 bg-gray-50">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXL5dozmPTNVLTg26q2tP-E_H4ZOASLUdkvKSB6M03vL5k46IqrabjfZIlF5CdQuufPZktQJtUu0yOYY35_hlNCorakVc57C2uBEXhQtvvCdivmegHsE-H8kam3eLEid2pRxojTpF38UHkO7FuaTpRuboLKid0D2yui2Duc00atI3mGI-1_yNYVgXiSQjIjRTg9WfZjn0_kjCqB_Ed77aCps3w9FqeeRc0BeCwJfxyNBb8qPGfQ6h8OMAz1eDcwL6-0MY"
-                          alt="Baastada Baraa"
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
-                        />
+                    {[
+                      MENU_ITEMS.find((item) => item.id === 'main-1') || MENU_ITEMS[3],
+                      MENU_ITEMS.find((item) => item.id === 'main-5') || MENU_ITEMS[7],
+                      MENU_ITEMS.find((item) => item.id === 'drink-1') || MENU_ITEMS[8]
+                    ].filter(Boolean).map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-white rounded-md overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all p-6 flex flex-col group cursor-pointer"
+                        onClick={() => setCurrentTab('menu')}
+                      >
+                        <div className="aspect-video overflow-hidden rounded mb-4 bg-gray-50">
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
+                          />
+                        </div>
+                        <div className="flex justify-between items-baseline mb-2">
+                          <h4 className="font-heading font-bold text-lg text-primary-900">{item.name}</h4>
+                          <span className="text-gold-600 font-mono font-bold">${item.price.toFixed(2)}</span>
+                        </div>
+                        <p className="text-gray-600 text-xs leading-relaxed mb-4 flex-grow line-clamp-3">
+                          {item.description}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {item.tags.map((tag, idx) => (
+                            <span key={idx} className="bg-slate-100 text-[9px] font-sans font-bold text-slate-500 px-2 py-0.5 rounded uppercase">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex justify-between items-baseline mb-2">
-                        <h4 className="font-heading font-bold text-lg text-primary-900">Baastada Baraa</h4>
-                        <span className="text-gold-600 font-mono font-bold">$18.00</span>
-                      </div>
-                      <p className="text-gray-600 text-xs leading-relaxed mb-4 flex-grow">
-                        Baasto talyaani ah oo lagu kariyay suugo hilib iyo khudaar is dhex jira oo caraf badan.
-                      </p>
-                      <div className="flex gap-2">
-                        <span className="bg-slate-100 text-[9px] font-sans font-bold text-slate-500 px-2 py-0.5 rounded">PASTA</span>
-                        <span className="bg-slate-100 text-[9px] font-sans font-bold text-slate-500 px-2 py-0.5 rounded">HALAL</span>
-                      </div>
-                    </div>
-
-                    {/* Item 2 */}
-                    <div className="bg-white rounded-md overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all p-6 flex flex-col group cursor-pointer" onClick={() => setCurrentTab('menu')}>
-                      <div className="aspect-video overflow-hidden rounded mb-4 bg-gray-50">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoPed7BS6WR25zbgCAMHgjJ9kiu9szb3BvWv_GiWPPZXEb1vVKHzLFNlaOzj-MPmbYKrlqwO8Bp2FSuMbzItXtkstyyXoB-i9AL3OQ_59zvKsOwcIt2p0s7TmBTvzFie7JXVBWdUta_dLlm-GX4Ky1dzdbHuGrGDBOBYTzhN-pIg5BuOqQQDteqUB6ITKS_L-qpFOI5IRViGL4pTKZI2OGDgBoT9qrf3s28yBM8pa5nl4HOGp0LZCuq99JbZeVWieqZMg"
-                          alt="Macmacaanka Baraa"
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
-                        />
-                      </div>
-                      <div className="flex justify-between items-baseline mb-2">
-                        <h4 className="font-heading font-bold text-lg text-primary-900">Macmacaanka Baraa</h4>
-                        <span className="text-gold-600 font-mono font-bold">$12.00</span>
-                      </div>
-                      <p className="text-gray-600 text-xs leading-relaxed mb-4 flex-grow">
-                        Iskiriin qabow oo lagu daray shukulaato, kareem aad u macaan, iyo jalaato guri.
-                      </p>
-                      <div className="flex gap-2">
-                        <span className="bg-slate-100 text-[9px] font-sans font-bold text-slate-500 px-2 py-0.5 rounded">DESSERT</span>
-                        <span className="bg-slate-100 text-[9px] font-sans font-bold text-slate-500 px-2 py-0.5 rounded">SWEET</span>
-                      </div>
-                    </div>
-
-                    {/* Item 3 */}
-                    <div className="bg-white rounded-md overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all p-6 flex flex-col group cursor-pointer" onClick={() => setCurrentTab('menu')}>
-                      <div className="aspect-video overflow-hidden rounded mb-4 bg-gray-50">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnm9dZgyrp0IzXmxx-uYBDzG_pREbJ2260ZC_MkTaOBshf45ju2isyFjhHljNuNa_t7wK0lOq6mcwv3tJtRNrCbUhZnykWLdKc7GmOKyQOnmvcCFL2WB9vEb1dq1bwWDypLV8p4ziwqnxWUEF4vjOAeDhkDKJPYNyQCxQyrKWdkEEKrLIebuJtd1uW7W_jMJjIVemBRxFrTYp8pDgAI9eeAjeIkB5ga6qxDuac4IglmJ8QzJ3zEJZm5r_PfxbTrfzQ6JA"
-                          alt="Casiirka Mango"
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
-                        />
-                      </div>
-                      <div className="flex justify-between items-baseline mb-2">
-                        <h4 className="font-heading font-bold text-lg text-primary-900">Casiirka Mango</h4>
-                        <span className="text-gold-600 font-mono font-bold">$8.00</span>
-                      </div>
-                      <p className="text-gray-600 text-xs leading-relaxed mb-4 flex-grow">
-                        Casiir dabiici ah oo laga soo miiqay Cambaha cusub ee dalkeena laga helo, aad u qabow.
-                      </p>
-                      <div className="flex gap-2">
-                        <span className="bg-slate-100 text-[9px] font-sans font-bold text-slate-500 px-2 py-0.5 rounded">FRESH</span>
-                        <span className="bg-slate-100 text-[9px] font-sans font-bold text-slate-500 px-2 py-0.5 rounded">FRUIT</span>
-                      </div>
-                    </div>
+                    ))}
                   </div>
 
                   <div className="text-center mt-12">
