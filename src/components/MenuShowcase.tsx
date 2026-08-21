@@ -334,30 +334,30 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
   };
 
   return (
-    <section className="py-20 bg-slate-50 text-slate-900 min-h-screen">
-      <div className="max-w-7xl mx-auto px-6">
+    <section className="py-8 sm:py-16 md:py-20 bg-slate-50 text-slate-900 min-h-screen">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6">
         {/* Header Title */}
-        <div className="text-center max-w-xl mx-auto mb-12">
-          <span className="text-gold-600 font-sans font-bold text-xs tracking-[0.25em] uppercase block mb-3">
+        <div className="text-center max-w-xl mx-auto mb-8 sm:mb-12">
+          <span className="text-gold-600 font-sans font-bold text-[10px] sm:text-xs tracking-[0.2em] sm:tracking-[0.25em] uppercase block mb-2 sm:mb-3">
             DOORASHADA KUUGGA
           </span>
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-primary-900 mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-primary-900 mb-2 sm:mb-4">
             Menyada Gaarka Ah
           </h2>
-          <p className="text-gray-600 text-sm leading-relaxed">
+          <p className="text-gray-600 text-xs sm:text-sm leading-relaxed px-2 sm:px-0">
             Waxaan kuu soo xulnay cuntooyin dabeeci ah oo ku duban xawaashyada asalka ah. Dooro cuntada aad jeceshahay si aad u ogaato sirta ku qarsoon dhadhankayaga.
           </p>
         </div>
 
         {/* Search & Category Tabs Control Panel */}
-        <div className="flex flex-col md:flex-row gap-6 justify-between items-center mb-10 pb-6 border-b border-gray-200">
+        <div className="flex flex-col md:flex-row gap-4 sm:gap-6 justify-between items-center mb-6 sm:mb-10 pb-4 sm:pb-6 border-b border-gray-200">
           {/* Categories */}
-          <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-none">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto w-full md:w-auto pb-1.5 md:pb-0 scrollbar-none">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.key}
                 onClick={() => setActiveCategory(cat.key)}
-                className={`px-4 py-2.5 rounded-full text-xs font-sans font-semibold tracking-wider whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3 py-1.5 sm:px-4 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-sans font-semibold tracking-wide whitespace-nowrap transition-all cursor-pointer shrink-0 ${
                   activeCategory === cat.key
                     ? 'bg-primary-900 text-gold-400 shadow-md shadow-primary-900/15'
                     : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
@@ -375,13 +375,13 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
               placeholder="Raadi cunto ama cabitaan..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white text-sm py-2.5 pl-10 pr-4 rounded-full border border-gray-200 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-colors"
+              className="w-full bg-white text-xs sm:text-sm py-2 sm:py-2.5 pl-9 sm:pl-10 pr-4 rounded-full border border-gray-200 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-colors"
             />
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2" />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="text-xs text-gray-400 hover:text-gray-600 absolute right-3.5 top-1/2 -translate-y-1/2"
+                className="text-[10px] sm:text-xs text-gray-400 hover:text-gray-600 absolute right-3 sm:right-3.5 top-1/2 -translate-y-1/2"
               >
                 Clear
               </button>
@@ -389,10 +389,10 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
           </div>
         </div>
 
-        {/* Menu Grid */}
+        {/* Menu Grid - 2 columns on mobile, 2 on tablet, 3 on desktop */}
         <motion.div
           layout
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
+          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6 lg:gap-8"
         >
           <AnimatePresence mode="popLayout">
             {filteredItems.map((item, index) => {
@@ -400,13 +400,13 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
               return (
                 <motion.div
                   layout
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  transition={{ duration: 0.35, delay: index * 0.03 }}
                   key={item.id}
                   onClick={() => handleItemSelect(item)}
-                  className="bg-white rounded-md overflow-hidden border border-gray-200 hover:border-gray-300/80 hover:shadow-xl transition-all cursor-pointer group flex flex-col h-full"
+                  className="bg-white rounded-lg sm:rounded-xl overflow-hidden border border-gray-200/90 hover:border-gray-300 hover:shadow-lg transition-all cursor-pointer group flex flex-col h-full shadow-xs"
                 >
                   {/* Food Image Container */}
                   <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
@@ -420,74 +420,78 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
 
                     {/* Tags Overlays */}
                     {item.isFeatured && (
-                      <span className="absolute top-3 left-3 bg-gold-400 text-primary-950 text-[9px] font-sans font-bold tracking-wider px-2 py-1 rounded flex items-center gap-1 shadow-md">
-                        <Sparkles className="w-2.5 h-2.5" />
-                        SIGNATURE
+                      <span className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-gold-400 text-primary-950 text-[7.5px] sm:text-[9px] font-sans font-bold tracking-wider px-1.5 py-0.5 sm:px-2 sm:py-1 rounded flex items-center gap-0.5 sm:gap-1 shadow-sm">
+                        <Sparkles className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+                        <span className="hidden xs:inline">SIGNATURE</span>
                       </span>
                     )}
 
                     {/* Favorite Button */}
                     <button
                       onClick={(e) => toggleFavorite(item.id, e)}
-                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-gray-600 hover:text-red-500 hover:scale-110 transition-all shadow-md"
+                      className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center text-gray-600 hover:text-red-500 hover:scale-110 transition-all shadow-xs sm:shadow-md"
                     >
                       <Heart
-                        className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`}
+                        className={`w-3 h-3 sm:w-4 sm:h-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`}
                       />
                     </button>
 
-                    {/* Price Overlay */}
-                    <div className="absolute bottom-3 right-3 bg-primary-900/90 text-gold-400 px-3 py-1.5 rounded-sm font-sans font-bold text-sm">
+                    {/* Price Overlay on Image */}
+                    <div className="absolute bottom-1.5 right-1.5 sm:bottom-3 sm:right-3 bg-primary-900/95 text-gold-400 px-1.5 py-0.5 sm:px-3 sm:py-1 rounded text-[10.5px] sm:text-sm font-sans font-bold shadow-xs">
                       ${item.price.toFixed(2)}
                     </div>
                   </div>
 
                   {/* Food Content */}
-                  <div className="p-6 flex flex-col flex-grow">
-                    <div className="flex justify-between items-start gap-2 mb-2">
-                      <h3 className="text-lg font-heading font-bold text-primary-900 group-hover:text-gold-600 transition-colors">
-                        {item.name}
-                      </h3>
-                      {item.rating && (
-                        <div className="flex items-center gap-1 text-amber-500 text-xs font-bold shrink-0 mt-1">
-                          <Star className="w-3.5 h-3.5 fill-amber-500" />
-                          <span>{item.rating}</span>
-                        </div>
-                      )}
+                  <div className="p-2.5 sm:p-4 md:p-6 flex flex-col flex-grow justify-between">
+                    <div>
+                      <div className="flex justify-between items-start gap-1 mb-1 sm:mb-2">
+                        <h3 className="text-xs sm:text-base lg:text-lg font-heading font-bold text-primary-900 group-hover:text-gold-600 transition-colors line-clamp-1 sm:line-clamp-2 leading-tight">
+                          {item.name}
+                        </h3>
+                        {item.rating && (
+                          <div className="flex items-center gap-0.5 sm:gap-1 text-amber-500 text-[9.5px] sm:text-xs font-bold shrink-0 mt-0.5">
+                            <Star className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 fill-amber-500" />
+                            <span>{item.rating}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-gray-600 text-[10px] sm:text-xs leading-snug sm:leading-relaxed mb-2 sm:mb-3 line-clamp-2 sm:line-clamp-3">
+                        {item.description}
+                      </p>
                     </div>
 
-                    <p className="text-gray-600 text-xs leading-relaxed mb-4 flex-grow line-clamp-3">
-                      {item.description}
-                    </p>
+                    <div>
+                      {/* Tags/Category labels */}
+                      <div className="flex flex-wrap gap-1 mt-auto pt-1.5 sm:pt-2.5 border-t border-gray-100">
+                        {item.tags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag}
+                            className="bg-slate-100 text-[8.5px] sm:text-[10px] font-sans font-medium text-slate-600 px-1.5 py-0.5 rounded-full uppercase"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
 
-                    {/* Tags/Category labels */}
-                    <div className="flex flex-wrap gap-1.5 mt-auto pt-3 border-t border-gray-100">
-                      {item.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="bg-slate-100 text-[10px] font-sans font-semibold text-slate-600 px-2 py-0.5 rounded-full"
-                        >
-                          #{tag}
+                      {/* Quick Add To Cart Button */}
+                      <div className="flex items-center justify-between gap-1.5 mt-2 sm:mt-3 pt-2 border-t border-slate-100">
+                        <span className="text-xs sm:text-sm font-sans font-bold text-gold-700 hidden xs:inline">
+                          ${item.price.toFixed(2)}
                         </span>
-                      ))}
-                    </div>
-
-                    {/* Quick Add To Cart Button */}
-                    <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100">
-                      <span className="text-sm font-sans font-bold text-gold-700">
-                        ${item.price.toFixed(2)}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToCart(item, 1, '');
-                          setIsCartOpen(true);
-                        }}
-                        className="bg-gold-500 hover:bg-gold-400 active:scale-95 text-primary-950 font-sans font-bold text-[10.5px] tracking-wider px-3.5 py-2 rounded flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow-md"
-                      >
-                        <ShoppingCart className="w-3.5 h-3.5" />
-                        Ku dar Dalabka
-                      </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(item, 1, '');
+                            setIsCartOpen(true);
+                          }}
+                          className="w-full xs:w-auto bg-gold-500 hover:bg-gold-400 active:scale-95 text-primary-950 font-sans font-bold text-[9.5px] sm:text-[10.5px] tracking-wide px-2 py-1.5 sm:px-3 sm:py-2 rounded flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+                        >
+                          <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                          <span>Ku dar<span className="hidden sm:inline"> Dalabka</span></span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -497,24 +501,24 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
         </motion.div>
 
         {filteredItems.length === 0 && (
-          <div className="text-center py-16 bg-white rounded-md border border-gray-200 mt-6">
-            <p className="text-gray-500 text-sm">Cunto u dhiganta baaritaankaaga lama helin. Fadlan isku day erey kale.</p>
+          <div className="text-center py-12 sm:py-16 bg-white rounded-lg border border-gray-200 mt-6 px-4">
+            <p className="text-gray-500 text-xs sm:text-sm">Cunto u dhiganta baaritaankaaga lama helin. Fadlan isku day erey kale.</p>
           </div>
         )}
 
         {/* Floating Reservation Banner */}
-        <div className="mt-16 bg-primary-900 rounded-lg p-8 md:p-12 text-white flex flex-col md:flex-row gap-8 items-center justify-between shadow-xl">
+        <div className="mt-10 sm:mt-16 bg-primary-900 rounded-lg sm:rounded-xl p-6 sm:p-8 md:p-12 text-white flex flex-col md:flex-row gap-6 sm:gap-8 items-center justify-between shadow-xl">
           <div className="max-w-xl text-center md:text-left">
-            <h3 className="text-2xl font-display font-bold mb-3 text-gold-400">
+            <h3 className="text-xl sm:text-2xl font-display font-bold mb-2 sm:mb-3 text-gold-400">
               Ma doonaysaa jawi gaar ah?
             </h3>
-            <p className="text-gray-300 text-sm leading-relaxed">
+            <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
               Buug-garayso miiskaaga maanta si aad u hesho cuntooyin gaar ah oo kulul iyo adeeg gaar ah oo hufan oo ay diyaariyeen kuugyadeena ugu fiican.
             </p>
           </div>
           <button
             onClick={onBookClick}
-            className="bg-gold-500 hover:bg-gold-400 text-primary-950 font-sans font-bold text-xs tracking-widest px-8 py-4 rounded-sm whitespace-nowrap hover:shadow-lg transition-all cursor-pointer shrink-0"
+            className="w-full sm:w-auto bg-gold-500 hover:bg-gold-400 text-primary-950 font-sans font-bold text-xs tracking-widest px-6 sm:px-8 py-3.5 sm:py-4 rounded-sm whitespace-nowrap hover:shadow-lg transition-all cursor-pointer shrink-0 text-center"
           >
             BALLANSO MIISKAAGA HADA
           </button>
@@ -524,7 +528,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       {/* Detail Overlay Modal */}
       <AnimatePresence>
         {selectedItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -539,18 +543,18 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-3xl bg-white rounded-lg overflow-hidden shadow-2xl z-10 border border-gray-100 my-8"
+              className="relative w-full max-w-3xl bg-white rounded-lg sm:rounded-xl overflow-hidden shadow-2xl z-10 border border-gray-100 my-4 sm:my-8 max-h-[92vh] overflow-y-auto"
             >
               <button
                 onClick={() => setSelectedItem(null)}
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all z-20 cursor-pointer"
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all z-20 cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
               <div className="grid grid-cols-1 md:grid-cols-2">
                 {/* Modal Image & Summary Column */}
-                <div className="relative bg-slate-900 text-white flex flex-col justify-between">
+                <div className="relative bg-slate-900 text-white flex flex-col justify-between min-h-[220px] sm:min-h-[280px] md:min-h-full">
                   <div className="absolute inset-0 z-0">
                     <img
                       src={selectedItem.imageUrl}
@@ -561,14 +565,14 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                     <div className="absolute inset-0 bg-gradient-to-b from-primary-950/80 via-primary-950/50 to-primary-950/95" />
                   </div>
 
-                  <div className="relative z-10 p-8 space-y-4">
-                    <span className="text-gold-400 font-sans font-bold text-[10px] tracking-widest uppercase block">
+                  <div className="relative z-10 p-5 sm:p-8 space-y-2 sm:space-y-4">
+                    <span className="text-gold-400 font-sans font-bold text-[9px] sm:text-[10px] tracking-widest uppercase block">
                       {selectedItem.category === 'appetizer' && 'Cunto Fudud'}
                       {selectedItem.category === 'main' && 'Cuntada Rasmiga ah'}
                       {selectedItem.category === 'drink' && 'Cabitaan ama Kafee'}
                       {selectedItem.category === 'dessert' && 'Macmacaan'}
                     </span>
-                    <h3 className="text-3xl font-heading font-bold text-white tracking-tight leading-tight">
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-heading font-bold text-white tracking-tight leading-tight">
                       {selectedItem.name}
                     </h3>
                     <p className="text-xs text-gray-300 leading-relaxed max-w-sm">
@@ -576,20 +580,20 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                     </p>
                   </div>
 
-                  <div className="relative z-10 p-8 bg-black/40 border-t border-white/5 space-y-4">
+                  <div className="relative z-10 p-4 sm:p-8 bg-black/40 border-t border-white/5 space-y-2.5 sm:space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-400 font-sans">Qiimaha Cuntada:</span>
-                      <span className="text-lg font-bold text-gold-400 font-sans">${selectedItem.price.toFixed(2)}</span>
+                      <span className="text-base sm:text-lg font-bold text-gold-400 font-sans">${selectedItem.price.toFixed(2)}</span>
                     </div>
 
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-400 font-sans">Tirada la doonayo:</span>
-                      <span className="text-sm font-bold text-white font-mono">{modalQuantity} xabo</span>
+                      <span className="text-xs sm:text-sm font-bold text-white font-mono">{modalQuantity} xabo</span>
                     </div>
-                    <div className="h-px bg-white/10 my-2" />
+                    <div className="h-px bg-white/10 my-1 sm:my-2" />
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-white font-sans font-bold">Isugeynta (Total):</span>
-                      <span className="text-xl font-bold text-gold-400 font-sans">
+                      <span className="text-xs sm:text-sm text-white font-sans font-bold">Isugeynta (Total):</span>
+                      <span className="text-lg sm:text-xl font-bold text-gold-400 font-sans">
                         ${(selectedItem.price * modalQuantity).toFixed(2)}
                       </span>
                     </div>
@@ -597,11 +601,11 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                 </div>
 
                 {/* Interactive Modal Form / Actions Column */}
-                <div className="p-8 bg-white flex flex-col justify-center min-h-[450px]">
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5 text-amber-500 text-sm font-bold">
-                        <Star className="w-4 h-4 fill-amber-500" />
+                <div className="p-5 sm:p-8 bg-white flex flex-col justify-center min-h-0 md:min-h-[450px]">
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <div className="flex items-center gap-1.5 text-amber-500 text-xs sm:text-sm font-bold">
+                        <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-500" />
                         <span>{selectedItem.rating || '4.8'} ee darajada cuntada</span>
                       </div>
                       <p className="text-gray-600 text-xs leading-relaxed">
@@ -611,7 +615,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
 
                     {/* Extra requirements notes textarea */}
                     <div>
-                      <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase mb-2 flex items-center gap-1.5">
+                      <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase mb-1.5 sm:mb-2 flex items-center gap-1.5">
                         <MessageSquare className="w-3 h-3 text-gold-600" />
                         Codsiyada Gaarka ah / Notes (Tus. "Ha ku darin basasha")
                       </label>
@@ -620,14 +624,14 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                         value={cartNotes}
                         onChange={(e) => setCartNotes(e.target.value)}
                         placeholder="Wax ma naga codsanaysaa ku saabsan diyaarinta..."
-                        className="w-full bg-slate-50 text-xs p-3 rounded border border-gray-200 focus:outline-none focus:border-gold-500 transition-colors"
+                        className="w-full bg-slate-50 text-xs p-2.5 sm:p-3 rounded border border-gray-200 focus:outline-none focus:border-gold-500 transition-colors"
                       />
                     </div>
 
                     {/* Order Options */}
-                    <div className="space-y-4 pt-4 border-t border-gray-100">
-                      {/* Quantity Selector inside detail modal right column too */}
-                      <div className="flex items-center justify-between gap-3 bg-slate-50 p-3 rounded-md border border-slate-100">
+                    <div className="space-y-3 sm:space-y-4 pt-3 sm:pt-4 border-t border-gray-100">
+                      {/* Quantity Selector */}
+                      <div className="flex items-center justify-between gap-3 bg-slate-50 p-2.5 sm:p-3 rounded-md border border-slate-100">
                         <span className="text-xs font-sans font-bold text-slate-700">Tirada (Quantity):</span>
                         <div className="flex items-center gap-3 bg-white border border-slate-200 px-2.5 py-1 rounded shadow-sm">
                           <button 
@@ -655,7 +659,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                           setSelectedItem(null);
                           setIsCartOpen(true);
                         }}
-                        className="w-full bg-gold-500 hover:bg-gold-400 text-primary-950 font-sans font-bold text-xs tracking-widest py-3.5 rounded flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-gold-500/10"
+                        className="w-full bg-gold-500 hover:bg-gold-400 text-primary-950 font-sans font-bold text-xs tracking-widest py-3 sm:py-3.5 rounded flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-gold-500/10"
                       >
                         <ShoppingCart className="w-4 h-4" />
                         KU DAR DALABKA (Cart) - ${(selectedItem.price * modalQuantity).toFixed(2)}
@@ -667,7 +671,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                           setSelectedItem(null);
                           onBookClick();
                         }}
-                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-sans font-bold text-xs tracking-widest py-3.5 rounded transition-all cursor-pointer text-center"
+                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-sans font-bold text-xs tracking-widest py-3 sm:py-3.5 rounded transition-all cursor-pointer text-center"
                       >
                         BALLANSO MIIS HADA
                       </button>

@@ -126,7 +126,7 @@ export default function App() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-6 md:gap-8">
                     {[
                       MENU_ITEMS.find((item) => item.id === 'main-1') || MENU_ITEMS[3],
                       MENU_ITEMS.find((item) => item.id === 'main-5') || MENU_ITEMS[7],
@@ -134,10 +134,10 @@ export default function App() {
                     ].filter(Boolean).map((item) => (
                       <div
                         key={item.id}
-                        className="bg-white rounded-md overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all p-6 flex flex-col group cursor-pointer"
+                        className="bg-white rounded-lg sm:rounded-md overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all p-3.5 sm:p-5 md:p-6 flex flex-col group cursor-pointer shadow-xs"
                         onClick={() => setCurrentTab('menu')}
                       >
-                        <div className="aspect-video overflow-hidden rounded mb-4 bg-gray-50">
+                        <div className="aspect-video overflow-hidden rounded mb-3 sm:mb-4 bg-gray-50">
                           <img
                             src={item.imageUrl}
                             alt={item.name}
@@ -145,16 +145,16 @@ export default function App() {
                             className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
                           />
                         </div>
-                        <div className="flex justify-between items-baseline mb-2">
-                          <h4 className="font-heading font-bold text-lg text-primary-900">{item.name}</h4>
-                          <span className="text-gold-600 font-mono font-bold">${item.price.toFixed(2)}</span>
+                        <div className="flex justify-between items-baseline mb-1.5 sm:mb-2">
+                          <h4 className="font-heading font-bold text-sm sm:text-base lg:text-lg text-primary-900">{item.name}</h4>
+                          <span className="text-gold-600 font-mono font-bold text-xs sm:text-sm md:text-base">${item.price.toFixed(2)}</span>
                         </div>
-                        <p className="text-gray-600 text-xs leading-relaxed mb-4 flex-grow line-clamp-3">
+                        <p className="text-gray-600 text-xs leading-relaxed mb-3 sm:mb-4 flex-grow line-clamp-2 sm:line-clamp-3">
                           {item.description}
                         </p>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5">
                           {item.tags.map((tag, idx) => (
-                            <span key={idx} className="bg-slate-100 text-[9px] font-sans font-bold text-slate-500 px-2 py-0.5 rounded uppercase">
+                            <span key={idx} className="bg-slate-100 text-[8.5px] sm:text-[9px] font-sans font-bold text-slate-500 px-2 py-0.5 rounded uppercase">
                               {tag}
                             </span>
                           ))}
