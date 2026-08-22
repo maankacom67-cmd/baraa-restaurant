@@ -183,6 +183,29 @@ app.post('/api/reviews', (req, res) => {
   res.status(201).json(newReview);
 });
 
+// Explicit Sitemap.xml & Robots.txt Routes
+app.get('/sitemap.xml', (req, res) => {
+  const publicSitemap = path.join(process.cwd(), 'public', 'sitemap.xml');
+  const distSitemap = path.join(process.cwd(), 'dist', 'sitemap.xml');
+  const target = fs.existsSync(publicSitemap) ? publicSitemap : distSitemap;
+  if (fs.existsSync(target)) {
+    res.header('Content-Type', 'application/xml');
+    return res.sendFile(target);
+  }
+  res.status(404).send('Sitemap not found');
+});
+
+app.get('/robots.txt', (req, res) => {
+  const publicRobots = path.join(process.cwd(), 'public', 'robots.txt');
+  const distRobots = path.join(process.cwd(), 'dist', 'robots.txt');
+  const target = fs.existsSync(publicRobots) ? publicRobots : distRobots;
+  if (fs.existsSync(target)) {
+    res.header('Content-Type', 'text/plain');
+    return res.sendFile(target);
+  }
+  res.status(404).send('Robots.txt not found');
+});
+
 // ---------------------- FRONTEND / STATIC SERVING ----------------------
 
 async function startServer() {
