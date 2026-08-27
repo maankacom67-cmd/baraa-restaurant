@@ -412,7 +412,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                   <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
                     <img
                       src={item.imageUrl}
-                      alt={item.name}
+                      alt={item.alt || `${item.name} Baraa Restaurant`}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
@@ -558,7 +558,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                   <div className="absolute inset-0 z-0">
                     <img
                       src={selectedItem.imageUrl}
-                      alt={selectedItem.name}
+                      alt={selectedItem.alt || `${selectedItem.name} Baraa Restaurant`}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover opacity-40"
                     />

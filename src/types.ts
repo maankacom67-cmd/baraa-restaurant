@@ -5,6 +5,7 @@ export interface MenuItem {
   price: number;
   category: 'appetizer' | 'main' | 'drink' | 'dessert';
   imageUrl: string;
+  alt?: string;
   tags: string[];
   isFeatured?: boolean;
   isPopular?: boolean;

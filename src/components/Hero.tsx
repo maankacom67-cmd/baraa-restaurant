@@ -45,19 +45,18 @@ export default function Hero({ setCurrentTab }: HeroProps) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-3xl sm:text-4xl lg:text-5xl font-display font-medium text-white tracking-tight leading-[1.15] mb-4"
+          className="text-2xl sm:text-4xl lg:text-5xl font-display font-bold text-white tracking-tight leading-[1.2] mb-4"
         >
-          Kusoo dhawaada <br />
-          Baraa Restaurant
+          Baraa Restaurant – Maqaayad Online ah oo Muqdisho ku Taalla
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.4 }}
-          className="text-xs sm:text-sm text-gray-300/90 max-w-xl mx-auto font-sans leading-relaxed mb-6"
+          className="text-xs sm:text-sm text-gray-300/90 max-w-2xl mx-auto font-sans leading-relaxed mb-6"
         >
-          Khibrad cunto oo heer sare ah, dhadhan dhab ah iyo jawi raaxo leh oo loogu talagalay dadka jecel tayada sare.
+          Dhadhanka hiddaha iyo casriga oo isku dheehan. Dalbo cunto macaan, hilib, bariis, baasto, pizza cusub, coffee iyo macmacaan adigoo jooga gurigaaga ama xafiiskaaga.
         </motion.p>
 
         <motion.div

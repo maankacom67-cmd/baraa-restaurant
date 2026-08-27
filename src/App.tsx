@@ -9,6 +9,7 @@ import MenuShowcase from './components/MenuShowcase';
 import ReservationForm from './components/ReservationForm';
 import AboutUs from './components/AboutUs';
 import ReviewsSection from './components/ReviewsSection';
+import SeoGuideArticle from './components/SeoGuideArticle';
 import BaraaLogo from './components/BaraaLogo';
 import { MENU_ITEMS } from './data';
 
@@ -83,7 +84,7 @@ export default function App() {
                     <div className="relative overflow-hidden rounded-md col-span-1 row-span-2 border border-gray-200 shadow-md group">
                       <img
                         src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzEemIynUqKSJqt2boD0uBdv4JIkCwYKgRJub_bRKHt0aNrMFSAqluj__RNLB9zQESnUTYnw4-WzXiX1KUvqa_mvq0-AxhwO0UWjDXShZ-E63-jt65sPXJ34vda30uCEBnalQwkgd53FdX0D4vJpfyBO4l8dEnUIR4Tsqv6gTCJKMd_4DaoiX8Z37L3LUx8_jPXQrQCd-I74gY6ORvBSKJSURKUAfLd1C9zGlc_wIFibTJupAifpM5dHZQUOjc7Pz6ss0"
-                        alt="Cooking visual"
+                        alt="Baraa Restaurant maqaayad online ah Muqdisho"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
@@ -92,7 +93,7 @@ export default function App() {
                     <div className="relative overflow-hidden rounded-md col-span-1 row-span-1 border border-gray-200 shadow-md group">
                       <img
                         src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPDr7Ng5MEIso-WCHqf-zTG8AgFv7VnG0TbOx_7r7Wa_whMB1DgHM3KH1jzG-AVktp_xKfjAtZPcMEV-P5kaABE3YN4qidpQFL0aQrJ-sN59QRzpkYl-MWaTD_43nqlwL8NHHdV5E9J7ZF8uKuRKQaKlY2c8nFZL8JCuhf7UpXmMGPtQGr5f7GW8zINr2QF_gbn6WdUWzBnj6xGvUl5pLsB-dYcZqRT58wdjqMckUE-gY8da37JBG-yeR3Y7Wh_jeMleQ"
-                        alt="Appetizer dish"
+                        alt="Cuntooyin kala duwan Baraa Restaurant Muqdisho"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
@@ -100,7 +101,7 @@ export default function App() {
                     <div className="relative overflow-hidden rounded-md col-span-1 row-span-1 border border-gray-200 shadow-md group">
                       <img
                         src="https://lh3.googleusercontent.com/aida-public/AB6AXuBajBZkS8d3TPsYKJlmYJXC9zR1efD2_yMbz_yCmf4IcUV_YX-rFOnFdSFbopSZC8U0ArLMLsttfl6thzPNo1qMHU9wMPi-_7mLmY4muvtdrFqTM-bO_FGW_r4eBgdGcyc-cVogV4_fh4zpSf3etDix7IxTqwFkU2HR1DYqX6spmfhWO6eQhmo-Fp_SbhT1cugDWYCLk5gGMR0njsq6IiAri8Pgt9JOriyYA6gSdukLoJNOQMauYRW5nOjAuHPtVVd_PY4"
-                        alt="Dessert selection"
+                        alt="Baraa Restaurant menu Muqdisho"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
@@ -140,7 +141,7 @@ export default function App() {
                         <div className="aspect-video overflow-hidden rounded mb-3 sm:mb-4 bg-gray-50">
                           <img
                             src={item.imageUrl}
-                            alt={item.name}
+                            alt={item.alt || `${item.name} Baraa Restaurant`}
                             referrerPolicy="no-referrer"
                             className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
                           />
@@ -177,6 +178,18 @@ export default function App() {
 
                 </div>
               </section>
+
+              {/* Complete SEO Guide & Information Section */}
+              <SeoGuideArticle
+                onGoToMenu={() => {
+                  setCurrentTab('menu');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onGoToBook={() => {
+                  setCurrentTab('book');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
 
               {/* Booking CTA Section */}
               <section className="py-24 bg-primary-900 text-white relative overflow-hidden">

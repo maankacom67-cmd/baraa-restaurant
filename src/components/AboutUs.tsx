@@ -53,7 +53,7 @@ export default function AboutUs() {
             <div className="aspect-[16/10] rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shadow-xl relative group">
               <img
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuAq8_tbQUapR9fKtUWN1TZcwNaE7wClbipZ2hMQpJ27gr3Jy4DyNDyTRoG9pC6ecUmjGIHYsEHVJ6YT76r8XA3am8MRbAPQJW8snBUYgTtFunzwfLXqEm8_H797MkWb8VweVB3iuSZixpiqLXNKZPg1BDFHVKm4c38HXNITTrUCEjTJ6crzOxdhoZV8v62rzMnLW-oG6qdteAQRuBfdbtMj-j-Itr7MsndVi7F4LULE3p-HL1HlJO2inxtAWEao1T6Ys-A"
-                alt="Baraa Dining Presentation"
+                alt="Baraa Restaurant maqaayad online ah Muqdisho"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
               />
