@@ -92,6 +92,23 @@ export default function ReservationForm() {
       }),
     };
 
+    // Send automated alert to Telegram Bot
+    const botToken = '8992339748:AAHVoYo1Mfwpqp3dW4E070mkahSWALqfbdw';
+    const chatId = '7718402252';
+    const reservationTelegramText = `🥂 *BALLAN-QAAD MIIS CUSUB (RESERVATION)!*%0A%0A` +
+      `👤 *Magaca:* ${encodeURIComponent(name)}%0A` +
+      `📞 *Nambarka:* ${encodeURIComponent(paymentNumber)}%0A` +
+      `👥 *Tirada Dadka:* ${guests} qof%0A` +
+      `📅 *Taariikhda & Waqtiga:* ${encodeURIComponent(`${date} saacadu markay tahay ${time}`)}%0A` +
+      `🔖 *Code:* ${encodeURIComponent(bookingCode)}` +
+      (requests ? `%0A📝 *Codsiga:* ${encodeURIComponent(requests)}` : '');
+
+    try {
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${reservationTelegramText}&parse_mode=Markdown`);
+    } catch (tgErr) {
+      console.warn('Telegram reservation notification error:', tgErr);
+    }
+
     // EmailJS credentials hardcoded
     const serviceId = "service_baraa_smtp";
     const templateId = "template_mo42cxc";

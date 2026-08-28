@@ -9,6 +9,8 @@ import { MENU_ITEMS, CATEGORIES } from '../data';
 import { MenuItem } from '../types';
 import emailjs from '@emailjs/browser';
 import { sendOrderToFirebase, handleOrderSubmit } from '../lib/firebase';
+import { sendTelegramOrderNotification, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from '../lib/telegram';
+import OrderForm from './OrderForm';
 
 interface MenuShowcaseProps {
   onBookClick: () => void;
@@ -42,6 +44,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderEmailStatus, setOrderEmailStatus] = useState<'idle' | 'success' | 'error' | 'not_configured'>('idle');
   const [placedOrderDetails, setPlacedOrderDetails] = useState<any | null>(null);
+  const [showQuickOrderModal, setShowQuickOrderModal] = useState(false);
 
   // Helper: Add Item to Cart
   const addToCart = (item: MenuItem, qty: number = 1, notes: string = '') => {
@@ -260,6 +263,24 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       admin_email: 'maankacom66@gmail.com'
     };
 
+    // 1. Send automated alert to Telegram Bot (Token: 8992339748:AAHVoYo1Mfwpqp3dW4E070mkahSWALqfbdw, Chat ID: 7718402252)
+    try {
+      const foodSummary = itemsBrief || cart.map(c => `${c.item.name} (${c.quantity}x)`).join(', ');
+      await sendTelegramOrderNotification({
+        name: customerName || 'Macmiil',
+        phone: customerPhone,
+        food: foodSummary,
+        address: finalAddress,
+        total: `$${totalAmount.toFixed(2)}`,
+        orderType: orderType === 'takeaway' ? 'Takeaway' : 'Delivery',
+        paymentMethod: paymentMethod,
+        orderCode: orderCode
+      });
+      console.log('Telegram order notification sent successfully');
+    } catch (tgErr) {
+      console.warn('Telegram notification error:', tgErr);
+    }
+
     if (serviceId && templateId && publicKey) {
       try {
         console.log("Sending EmailJS with serviceId:", serviceId, "templateId:", templateId);
@@ -368,24 +389,35 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
             ))}
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full md:w-72">
-            <input
-              type="text"
-              placeholder="Raadi cunto ama cabitaan..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white text-xs sm:text-sm py-2 sm:py-2.5 pl-9 sm:pl-10 pr-4 rounded-full border border-gray-200 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-colors"
-            />
-            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2" />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="text-[10px] sm:text-xs text-gray-400 hover:text-gray-600 absolute right-3 sm:right-3.5 top-1/2 -translate-y-1/2"
-              >
-                Clear
-              </button>
-            )}
+          {/* Search Box & Quick Order Button */}
+          <div className="flex items-center gap-2.5 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <input
+                type="text"
+                placeholder="Raadi cunto ama cabitaan..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white text-xs sm:text-sm py-2 sm:py-2.5 pl-9 sm:pl-10 pr-4 rounded-full border border-gray-200 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-colors"
+              />
+              <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2" />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-[10px] sm:text-xs text-gray-400 hover:text-gray-600 absolute right-3 sm:right-3.5 top-1/2 -translate-y-1/2"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            
+            <button
+              onClick={() => setShowQuickOrderModal(true)}
+              className="bg-gold-500 hover:bg-gold-400 text-primary-950 px-3.5 py-2 sm:py-2.5 rounded-full text-xs font-sans font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Dalab Degdeg</span>
+              <span className="sm:hidden">Dalbo</span>
+            </button>
           </div>
         </div>
 
@@ -1067,6 +1099,32 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                   </div>
                 )}
               </div>
+            </motion.div>
+          </div>
+        )}
+        {/* Quick Order Modal with Telegram Notification */}
+        {showQuickOrderModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowQuickOrderModal(false)}
+              className="fixed inset-0 bg-primary-950/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg z-10 my-8"
+            >
+              <button
+                onClick={() => setShowQuickOrderModal(false)}
+                className="absolute top-4 right-4 z-20 text-white/80 hover:text-white bg-black/40 hover:bg-black/60 p-1.5 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <OrderForm onSuccess={() => setShowQuickOrderModal(false)} />
             </motion.div>
           </div>
         )}

@@ -11,6 +11,7 @@ import AboutUs from './components/AboutUs';
 import ReviewsSection from './components/ReviewsSection';
 import SeoGuideArticle from './components/SeoGuideArticle';
 import BaraaLogo from './components/BaraaLogo';
+import OrderForm from './components/OrderForm';
 import { MENU_ITEMS } from './data';
 
 export default function App() {
@@ -176,6 +177,26 @@ export default function App() {
                     </button>
                   </div>
 
+                </div>
+              </section>
+
+              {/* Direct Quick Order with Telegram Alert Section */}
+              <section className="py-16 bg-gradient-to-b from-white via-slate-50 to-white border-y border-gray-200">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6">
+                  <div className="text-center mb-8">
+                    <span className="text-gold-600 font-sans font-bold text-xs tracking-[0.25em] uppercase block mb-2">
+                      DALABKA DEGDEG AH (ONLINE ORDER)
+                    </span>
+                    <h3 className="text-2xl sm:text-3xl md:text-4xl font-heading font-bold text-primary-950 mb-3">
+                      Si Toos ah Cunto u Dalbo
+                    </h3>
+                    <p className="text-gray-600 text-xs sm:text-sm max-w-xl mx-auto">
+                      Geli magacaaga, nambarkaaga mobaylka, cuntada aad rabto iyo goobtaada si dalabkaaga loogu gudbiyo maamulka Telegram Bot-ka maqaayadda.
+                    </p>
+                  </div>
+                  <div className="max-w-xl mx-auto">
+                    <OrderForm />
+                  </div>
                 </div>
               </section>
 
