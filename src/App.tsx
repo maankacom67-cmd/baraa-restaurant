@@ -12,13 +12,20 @@ import ReviewsSection from './components/ReviewsSection';
 import SeoGuideArticle from './components/SeoGuideArticle';
 import BaraaLogo from './components/BaraaLogo';
 import OrderForm from './components/OrderForm';
+import PWAInstallBanner from './components/PWAInstallBanner';
+import PWAInstallButton from './components/PWAInstallButton';
+import OfflineIndicator from './components/OfflineIndicator';
 import { MENU_ITEMS } from './data';
+import { Smartphone, Download, Zap, Wifi } from 'lucide-react';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<'home' | 'menu' | 'about' | 'book' | 'reviews'>('home');
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col justify-between relative">
+      {/* Offline Status Warning Indicator */}
+      <OfflineIndicator />
+
       {/* Top Navbar */}
       <Navbar currentTab={currentTab} setCurrentTab={setCurrentTab} />
 
@@ -212,6 +219,70 @@ export default function App() {
                 }}
               />
 
+              {/* PWA Mobile App Promotion Section */}
+              <section className="py-16 bg-gradient-to-br from-primary-950 via-primary-900 to-primary-950 text-white relative overflow-hidden border-y border-gold-500/20">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="max-w-7xl mx-auto px-6 relative z-10">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div className="lg:col-span-7 space-y-4 text-left">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gold-500/20 text-gold-300 border border-gold-500/30">
+                        <Sparkles className="w-3.5 h-3.5 text-gold-400" />
+                        PROGRESSIVE WEB APP (PWA)
+                      </span>
+                      <h3 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-white leading-tight">
+                        Shub App-ka BARAA RESTAURANT Taleefankaaga
+                      </h3>
+                      <p className="text-gray-300 text-sm leading-relaxed max-w-xl">
+                        Uma baahnid inaad Play Store ama App Store ka raadiso. Hal gujin ku shubo shaashadda taleefankaaga adoo isticmaalaya tiknoolajiyadda casriga ah ee PWA.
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 p-3 rounded-xl">
+                          <Zap className="w-5 h-5 text-gold-400 shrink-0" />
+                          <span className="text-xs font-medium text-gray-200">Furitaan &amp; Dalab Degdeg ah</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 p-3 rounded-xl">
+                          <Smartphone className="w-5 h-5 text-gold-400 shrink-0" />
+                          <span className="text-xs font-medium text-gray-200">Muqaal Native Mobile App ah</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 p-3 rounded-xl">
+                          <Wifi className="w-5 h-5 text-gold-400 shrink-0" />
+                          <span className="text-xs font-medium text-gray-200">Khadla'aan ayuu u shaqeeyaa</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 p-3 rounded-xl">
+                          <CheckCircle className="w-5 h-5 text-gold-400 shrink-0" />
+                          <span className="text-xs font-medium text-gray-200">Menu-ga mar kasta waa cusub</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 flex flex-wrap items-center gap-4">
+                        <PWAInstallButton variant="hero" />
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-5 flex justify-center">
+                      <div className="relative p-3 bg-gradient-to-b from-gold-500/30 to-gold-500/5 rounded-3xl border border-gold-500/30 shadow-2xl backdrop-blur-md max-w-xs w-full">
+                        <div className="bg-primary-950 rounded-2xl p-5 border border-white/10 space-y-4 text-center">
+                          <img
+                            src="/favicon-512x512.png"
+                            alt="BARAA RESTAURANT App"
+                            className="w-20 h-20 mx-auto rounded-2xl shadow-lg border border-gold-400/40 bg-primary-900 object-cover"
+                          />
+                          <div>
+                            <h4 className="font-heading font-bold text-lg text-white">BARAA RESTAURANT</h4>
+                            <p className="text-xs text-gold-400">Dhadhanka Runta Ah • Mobile App</p>
+                          </div>
+                          <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-xs text-gray-300">
+                            ★ 5.0 Qiimeyn • Ku shubo 1 ilbiriqsi gudaheed
+                          </div>
+                          <PWAInstallButton variant="hero" className="w-full !py-2.5 text-xs" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               {/* Booking CTA Section */}
               <section className="py-24 bg-primary-900 text-white relative overflow-hidden">
                 <div className="absolute top-1/2 -left-12 -translate-y-1/2 opacity-5 text-white pointer-events-none">
@@ -387,12 +458,16 @@ export default function App() {
         {/* Bottom Bar */}
         <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-gray-500 font-sans tracking-wider">
           <p>© 2026 Baraa Restaurant. All Rights Reserved.</p>
-          <div className="flex gap-6">
+          <div className="flex gap-6 items-center">
+            <PWAInstallButton variant="compact" />
             <a href="#" className="hover:text-gold-400 transition-colors">PRIVACY POLICY</a>
             <a href="#" className="hover:text-gold-400 transition-colors">TERMS OF SERVICE</a>
           </div>
         </div>
       </footer>
+
+      {/* Floating PWA Install Prompt Banner */}
+      <PWAInstallBanner />
     </div>
   );
 }

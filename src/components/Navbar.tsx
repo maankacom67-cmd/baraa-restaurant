@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Award } from 'lucide-react';
+import { Menu, X, Award, Smartphone } from 'lucide-react';
 import BaraaLogo from './BaraaLogo';
+import PWAInstallButton from './PWAInstallButton';
 
 interface NavbarProps {
   currentTab: 'home' | 'menu' | 'about' | 'book' | 'reviews';
@@ -79,8 +80,9 @@ export default function Navbar({ currentTab, setCurrentTab }: NavbarProps) {
           })}
         </div>
 
-        {/* Desktop CTA */}
-        <div className="hidden md:block">
+        {/* Desktop CTA & PWA Install */}
+        <div className="hidden md:flex items-center gap-3">
+          <PWAInstallButton />
           <button
             onClick={() => {
               setCurrentTab('book');
@@ -93,13 +95,14 @@ export default function Navbar({ currentTab, setCurrentTab }: NavbarProps) {
         </div>
 
         {/* Mobile Menu Toggle */}
-        <div className="flex md:hidden items-center gap-3">
+        <div className="flex md:hidden items-center gap-2">
+          <PWAInstallButton />
           <button
             onClick={() => {
               setCurrentTab('book');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="bg-gold-500 text-primary-950 px-3.5 py-2 rounded-sm text-[11px] font-sans font-bold tracking-wider cursor-pointer"
+            className="bg-gold-500 text-primary-950 px-3 py-1.5 rounded-sm text-[11px] font-sans font-bold tracking-wider cursor-pointer"
           >
             DALBO
           </button>
@@ -133,12 +136,17 @@ export default function Navbar({ currentTab, setCurrentTab }: NavbarProps) {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400 font-sans pl-1">
-            <Award className="w-4 h-4 text-gold-400" />
-            <span>Maqaayada Ugu Fiican Muqdisho</span>
+          
+          <div className="pt-2 border-t border-white/10 flex flex-col gap-3">
+            <PWAInstallButton variant="hero" />
+            <div className="flex items-center gap-2 text-xs text-gray-400 font-sans pl-1">
+              <Award className="w-4 h-4 text-gold-400" />
+              <span>Maqaayada Ugu Fiican Muqdisho</span>
+            </div>
           </div>
         </div>
       )}
     </nav>
   );
 }
+

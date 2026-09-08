@@ -206,6 +206,33 @@ app.get('/robots.txt', (req, res) => {
   res.status(404).send('Robots.txt not found');
 });
 
+// Explicit Service Worker and Web Manifest Routes
+app.get('/sw.js', (req, res) => {
+  const publicSw = path.join(process.cwd(), 'public', 'sw.js');
+  const distSw = path.join(process.cwd(), 'dist', 'sw.js');
+  const target = fs.existsSync(publicSw) ? publicSw : distSw;
+  if (fs.existsSync(target)) {
+    res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+    res.setHeader('Service-Worker-Allowed', '/');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.sendFile(target);
+  }
+  res.status(404).send('Service worker not found');
+});
+
+app.get(['/manifest.json', '/site.webmanifest'], (req, res) => {
+  const isWebManifest = req.path.endsWith('webmanifest');
+  const fileName = isWebManifest ? 'site.webmanifest' : 'manifest.json';
+  const publicManifest = path.join(process.cwd(), 'public', fileName);
+  const distManifest = path.join(process.cwd(), 'dist', fileName);
+  const target = fs.existsSync(publicManifest) ? publicManifest : distManifest;
+  if (fs.existsSync(target)) {
+    res.setHeader('Content-Type', 'application/manifest+json; charset=UTF-8');
+    return res.sendFile(target);
+  }
+  res.status(404).send('Manifest not found');
+});
+
 // ---------------------- FRONTEND / STATIC SERVING ----------------------
 
 async function startServer() {
