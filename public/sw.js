@@ -15,7 +15,8 @@ const CORE_ASSETS = [
   '/pwa-192x192.png',
   '/pwa-512x512.png',
   '/pwa-maskable-512x512.png',
-  '/apple-touch-icon.png'
+  '/apple-touch-icon.png',
+  '/hero-food.jpg'
 ];
 
 // Install: Precache essential assets and immediately activate
