@@ -51,7 +51,7 @@ export const MENU_ITEMS: MenuItem[] = [
     description: 'Bariis basmati ah oo lala socodsiiyo hilib ari iyo waxyaabo kale oo cuntada dhadhankeeda kor u qaada. Waa doorashada koowaad ee qadada.',
     price: 9.50,
     category: 'main',
-    imageUrl: '/hero-food.jpg',
+    imageUrl: '/bariis.jpg',
     alt: 'Bariis iyo Hilib Ari - Bariis Basmati caraf leh iyo hilib ari | Baraa Restaurant Muqdisho',
     tags: ['Signature', 'Dhaqameed', 'Hilib Ari', 'Basmati'],
     isFeatured: true,

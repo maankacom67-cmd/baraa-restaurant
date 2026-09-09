@@ -17,6 +17,7 @@ const CORE_ASSETS = [
   '/pwa-maskable-512x512.png',
   '/apple-touch-icon.png',
   '/hero-food.jpg',
+  '/bariis.jpg',
   '/sambuus.jpg',
   '/juice.jpg'
 ];

@@ -91,7 +91,7 @@ export default function App() {
                   <div className="lg:col-span-7 grid grid-cols-2 gap-3 sm:gap-4 h-[320px] sm:h-[440px] lg:h-[550px]">
                     <div className="relative overflow-hidden rounded-md col-span-1 row-span-2 border border-gray-200 shadow-md group">
                       <img
-                        src="/hero-food.jpg"
+                        src="/bariis.jpg"
                         alt="Bariis iyo Hilib Ari basmati ah - Baraa Restaurant Muqdisho"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
