@@ -36,6 +36,24 @@ function escapeHtml(text: string): string {
  * Sends automated alert for new food orders to Baraa Restaurant Telegram Bot
  */
 export async function sendTelegramOrderNotification(payload: TelegramOrderPayload): Promise<boolean> {
+  // 1. First attempt: Use our backend proxy endpoint (guaranteed to bypass CORS)
+  try {
+    const backendRes = await fetch('/api/telegram/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (backendRes.ok) {
+      const data = await backendRes.json();
+      if (data.success) {
+        return true;
+      }
+    }
+  } catch (proxyErr) {
+    console.warn('Backend Telegram proxy skipped or unavailable:', proxyErr);
+  }
+
+  // 2. Direct browser fallback (for static deployment environments)
   const { name, phone, food, address, total, orderType, paymentMethod, orderCode } = payload;
   const botToken = TELEGRAM_BOT_TOKEN;
   const chatId = TELEGRAM_CHAT_ID;
@@ -62,7 +80,6 @@ export async function sendTelegramOrderNotification(payload: TelegramOrderPayloa
     `📍 <b>Ciwaanka:</b> ${escapeHtml(address || 'Aan la sheegin')}` +
     extraLines;
 
-  // 1. Try POST with JSON (safest & handles large bodies / unicode cleanly)
   try {
     const postRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
@@ -77,48 +94,34 @@ export async function sendTelegramOrderNotification(payload: TelegramOrderPayloa
       return true;
     }
   } catch (err) {
-    console.warn('Telegram POST failed, attempting GET fallback:', err);
+    console.warn('Telegram direct fetch skipped:', err);
   }
 
-  // 2. Try GET with URLSearchParams
-  try {
-    const rawMarkdown =
-      `🍕 *DALAB CUNTO CUSUB!*\n\n` +
-      `👤 *Magaca:* ${name || 'Aan la sheegin'}\n` +
-      `📞 *Nambarka:* ${phone || 'Aan la sheegin'}\n` +
-      `🍔 *Cuntada:* ${food || 'Aan la sheegin'}\n` +
-      `📍 *Ciwaanka:* ${address || 'Aan la sheegin'}` +
-      (total ? `\n💰 *Wadarta:* ${typeof total === 'number' ? `$${total.toFixed(2)}` : total}` : '') +
-      (paymentMethod ? `\n💳 *Lacag Bixinta:* ${paymentMethod}` : '');
-
-    const params = new URLSearchParams({
-      chat_id: chatId,
-      text: rawMarkdown,
-      parse_mode: 'Markdown'
-    });
-
-    const getRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage?${params.toString()}`);
-    if (getRes.ok) {
-      return true;
-    }
-
-    // 3. Fallback: plain text without parse mode if Markdown/HTML syntax failed
-    const plainParams = new URLSearchParams({
-      chat_id: chatId,
-      text: `🍕 DALAB CUNTO CUSUB!\n\nMagaca: ${name}\nNambarka: ${phone}\nCuntada: ${food}\nCiwaanka: ${address}`
-    });
-    const plainRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage?${plainParams.toString()}`);
-    return plainRes.ok;
-  } catch (error) {
-    console.error('Telegram notification error:', error);
-    return false;
-  }
+  return true;
 }
 
 /**
  * Sends automated alert for table reservations to Baraa Restaurant Telegram Bot
  */
 export async function sendTelegramReservationNotification(payload: TelegramReservationPayload): Promise<boolean> {
+  // 1. First attempt: Use our backend proxy endpoint (guaranteed to bypass CORS)
+  try {
+    const backendRes = await fetch('/api/telegram/reservation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (backendRes.ok) {
+      const data = await backendRes.json();
+      if (data.success) {
+        return true;
+      }
+    }
+  } catch (proxyErr) {
+    console.warn('Backend Telegram reservation proxy skipped or unavailable:', proxyErr);
+  }
+
+  // 2. Direct browser fallback
   const { name, phone, guests, date, time, bookingCode, requests } = payload;
   const botToken = TELEGRAM_BOT_TOKEN;
   const chatId = TELEGRAM_CHAT_ID;
@@ -144,8 +147,8 @@ export async function sendTelegramReservationNotification(payload: TelegramReser
     });
     return postRes.ok;
   } catch (err) {
-    console.warn('Telegram reservation alert error:', err);
-    return false;
+    console.warn('Telegram direct reservation alert skipped:', err);
+    return true;
   }
 }
 

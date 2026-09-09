@@ -73,6 +73,40 @@ function writeJSON(filePath: string, data: any[]) {
   }
 }
 
+// ---------------------- TELEGRAM INTEGRATION (SERVER-SIDE) ----------------------
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8992339748:AAHVoYo1Mfwpqp3dW4E070mkahSWALqfbdw';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '7718402252';
+
+function escapeHtml(text: string): string {
+  return (text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+async function sendTelegramAlert(text: string): Promise<boolean> {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text,
+        parse_mode: 'HTML'
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      console.warn('[Telegram Server Alert] Response error:', response.status, errText);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Telegram Server Alert] Network error:', err);
+    return false;
+  }
+}
+
 // ---------------------- API ROUTES ----------------------
 
 // 1. BOOKINGS (Ballansashada)
@@ -81,30 +115,45 @@ app.get('/api/bookings', (req, res) => {
   res.json(bookings);
 });
 
-app.post('/api/bookings', (req, res) => {
+app.post('/api/bookings', async (req, res) => {
   const { name, guests, date, time, requests, paymentMethod, paymentNumber, bookingCode } = req.body;
   
-  if (!name || !guests || !date || !time) {
-    return res.status(400).json({ error: 'Fadlan buuxi magaca, tirada dadka, taariikhda iyo saacadda.' });
+  if (!name || !date || !time) {
+    return res.status(400).json({ error: 'Fadlan buuxi magaca, taariikhda iyo saacadda.' });
   }
 
   const bookings = readJSON(BOOKINGS_FILE);
+  const code = bookingCode || `BR-${Date.now().toString().substring(8)}`;
   const newBooking = {
     id: Math.random().toString(36).substring(2, 9),
     name,
-    guests: Number(guests),
+    guests: Number(guests) || 2,
     date,
     time,
     requests: requests || '',
     paymentMethod: paymentMethod || 'evc_plus',
     paymentNumber: paymentNumber || '',
     isConfirmed: true,
-    bookingCode: bookingCode || `BR-${Date.now().toString().substring(8)}`,
+    bookingCode: code,
     createdAt: new Date().toISOString()
   };
 
   bookings.unshift(newBooking);
   writeJSON(BOOKINGS_FILE, bookings);
+
+  // Dispatch alert to Telegram on server side
+  const tgHtml =
+    `🥂 <b>BALLAN-QAAD MIIS CUSUB! (BARAA)</b>\n\n` +
+    `👤 <b>Macmiilka:</b> ${escapeHtml(name)}\n` +
+    `📞 <b>Telefoonka:</b> ${escapeHtml(paymentNumber || 'Aan la sheegin')}\n` +
+    `👥 <b>Tirada Dadka:</b> ${newBooking.guests} qof\n` +
+    `📅 <b>Taariikhda & Waqtiga:</b> ${escapeHtml(date)} saacadu markay tahay ${escapeHtml(time)}\n` +
+    `🔖 <b>Code:</b> ${escapeHtml(code)}` +
+    (requests ? `\n📝 <b>Codsiga:</b> ${escapeHtml(requests)}` : '') +
+    `\n💳 <b>Habka Lacagta:</b> ${escapeHtml(paymentMethod || 'EVC Plus')}`;
+
+  sendTelegramAlert(tgHtml).catch(() => {});
+
   res.status(201).json(newBooking);
 });
 
@@ -127,31 +176,101 @@ app.get('/api/orders', (req, res) => {
   res.json(orders);
 });
 
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', async (req, res) => {
   const orderData = req.body;
-  if (!orderData.customerPhone || !orderData.items || orderData.items.length === 0) {
-    return res.status(400).json({ error: 'Macluumaadka dalabka ama cuntooyinka ma dhammaystirna.' });
+  const customerName = orderData.customerName || orderData.name || 'Macmiil';
+  const customerPhone = orderData.customerPhone || orderData.phone;
+  const address = orderData.address || orderData.deliveryAddress || orderData.location || 'Muqdisho';
+  
+  if (!customerPhone) {
+    return res.status(400).json({ error: 'Fadlan geli nambarkaaga taleefonka.' });
   }
 
+  let foodItem = orderData.food;
+  if (!foodItem && Array.isArray(orderData.items) && orderData.items.length > 0) {
+    foodItem = orderData.items
+      .map((i: any) => `${i.item?.name || i.name} (x${i.quantity || 1})`)
+      .join(', ');
+  } else if (!foodItem) {
+    foodItem = 'Cunto dalab ah';
+  }
+
+  const rawTotal = orderData.totalAmount !== undefined 
+    ? Number(orderData.totalAmount) 
+    : (orderData.total ? Number(String(orderData.total).replace(/[^0-9.]/g, '')) : 0);
+  const totalAmount = isNaN(rawTotal) ? 0 : rawTotal;
+
   const orders = readJSON(ORDERS_FILE);
+  const orderCode = orderData.orderCode || `ORD-${Date.now().toString().substring(8)}`;
   const newOrder = {
     id: orderData.id || Math.random().toString(36).substring(2, 9),
-    customerName: orderData.customerName || 'Macmiil',
-    customerPhone: orderData.customerPhone,
-    address: orderData.address || '',
+    customerName,
+    customerPhone,
+    address,
+    food: foodItem,
     orderType: orderData.orderType || 'takeaway',
     paymentMethod: orderData.paymentMethod || 'EVC Plus',
-    items: orderData.items,
-    totalAmount: Number(orderData.totalAmount),
+    items: orderData.items || [{ name: foodItem, quantity: 1, price: totalAmount }],
+    totalAmount,
     date: orderData.date || new Date().toLocaleDateString('so-SO'),
     time: orderData.time || new Date().toLocaleTimeString('so-SO'),
     status: orderData.status || 'pending',
+    orderCode,
     createdAt: new Date().toISOString()
   };
 
   orders.unshift(newOrder);
   writeJSON(ORDERS_FILE, orders);
-  res.status(201).json(newOrder);
+
+  // Send Telegram Notification on server
+  const formattedTotal = totalAmount > 0 ? `$${totalAmount.toFixed(2)}` : (orderData.total || 'Aan la sheegin');
+  const tgHtml =
+    `🍕 <b>DALAB CUNTO CUSUB! (BARAA)</b>\n\n` +
+    `👤 <b>Macmiilka:</b> ${escapeHtml(customerName)}\n` +
+    `📞 <b>Telefoonka:</b> ${escapeHtml(customerPhone)}\n` +
+    `🍔 <b>Cuntada:</b> ${escapeHtml(foodItem)}\n` +
+    `📍 <b>Ciwaanka:</b> ${escapeHtml(address)}\n` +
+    `💰 <b>Wadarta:</b> ${escapeHtml(formattedTotal)}\n` +
+    `💳 <b>Lacag Bixinta:</b> ${escapeHtml(newOrder.paymentMethod)}\n` +
+    `🛵 <b>Nooca:</b> ${escapeHtml(newOrder.orderType)}\n` +
+    `🔖 <b>Code:</b> ${escapeHtml(orderCode)}`;
+
+  sendTelegramAlert(tgHtml).catch(() => {});
+
+  res.status(201).json({ success: true, order: newOrder });
+});
+
+// Dedicated Telegram API endpoints for direct triggers
+app.post('/api/telegram/order', async (req, res) => {
+  const { name, phone, food, address, total, orderType, paymentMethod, orderCode } = req.body;
+  const tgHtml =
+    `🍕 <b>DALAB CUNTO CUSUB! (BARAA)</b>\n\n` +
+    `👤 <b>Macmiilka:</b> ${escapeHtml(name || 'Macmiil')}\n` +
+    `📞 <b>Telefoonka:</b> ${escapeHtml(phone || 'Aan la sheegin')}\n` +
+    `🍔 <b>Cuntada:</b> ${escapeHtml(food || 'Aan la sheegin')}\n` +
+    `📍 <b>Ciwaanka:</b> ${escapeHtml(address || 'Muqdisho')}` +
+    (total ? `\n💰 <b>Wadarta:</b> ${escapeHtml(typeof total === 'number' ? `$${total.toFixed(2)}` : total)}` : '') +
+    (paymentMethod ? `\n💳 <b>Lacag Bixinta:</b> ${escapeHtml(paymentMethod)}` : '') +
+    (orderType ? `\n🛵 <b>Nooca:</b> ${escapeHtml(orderType)}` : '') +
+    (orderCode ? `\n🔖 <b>Code:</b> ${escapeHtml(orderCode)}` : '');
+
+  const sent = await sendTelegramAlert(tgHtml);
+  res.json({ success: sent });
+});
+
+app.post('/api/telegram/reservation', async (req, res) => {
+  const { name, phone, guests, date, time, bookingCode, requests } = req.body;
+  const tgHtml =
+    `🥂 <b>BALLAN-QAAD MIIS CUSUB! (BARAA)</b>\n\n` +
+    `👤 <b>Macmiilka:</b> ${escapeHtml(name || 'Aan la sheegin')}\n` +
+    `📞 <b>Telefoonka:</b> ${escapeHtml(phone || 'Aan la sheegin')}\n` +
+    `👥 <b>Tirada Dadka:</b> ${guests || 2} qof\n` +
+    `📅 <b>Taariikhda & Waqtiga:</b> ${escapeHtml(date)} saacadu markay tahay ${escapeHtml(time)}\n` +
+    `🔖 <b>Code:</b> ${escapeHtml(bookingCode || '')}` +
+    (requests ? `\n📝 <b>Codsiga:</b> ${escapeHtml(requests)}` : '');
+
+  const sent = await sendTelegramAlert(tgHtml);
+  res.json({ success: sent });
 });
 
 // 3. REVIEWS (Faallooyinka)

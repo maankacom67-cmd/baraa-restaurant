@@ -20,6 +20,7 @@ export default function ReservationForm() {
   const [showConfigHelper, setShowConfigHelper] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isConfirmingDeleteAll, setIsConfirmingDeleteAll] = useState(false);
+  const [formError, setFormError] = useState('');
 
 
   // Load existing bookings from server API or fallback to localStorage on mount
@@ -61,8 +62,10 @@ export default function ReservationForm() {
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !date || !time || !paymentNumber) {
-      alert('Fadlan buuxi dhammaan macluumaadka loo baahan yahay.');
+    setFormError('');
+
+    if (!name.trim() || !date || !time || !paymentNumber.trim()) {
+      setFormError('Fadlan buuxi dhammaan macluumaadka loo baahan yahay (Magacaaga, Taariikhda, Saacadda iyo Nambarka Taleefanka).');
       return;
     }
 
@@ -512,6 +515,14 @@ export default function ReservationForm() {
                   <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
+
+              {/* Error notice if validation fails */}
+              {formError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded text-rose-800 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
 
               {/* Submit Button */}
               <button

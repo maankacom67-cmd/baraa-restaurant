@@ -53,9 +53,15 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
         console.warn('[BARAA PWA] Service Worker registration skipped/failed:', err);
       });
 
-    // Handle seamless refresh when new service worker takes control
+    // Handle seamless refresh only when an existing service worker is replaced by a newer one
+    let hadController = Boolean(navigator.serviceWorker.controller);
     let isRefreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) {
+        // Initial installation and claim - do NOT reload the active page
+        hadController = true;
+        return;
+      }
       if (!isRefreshing) {
         isRefreshing = true;
         console.log('[BARAA PWA] App updated to latest version.');

@@ -98,6 +98,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
   };
 
   const [modalQuantity, setModalQuantity] = useState(1);
+  const [cartError, setCartError] = useState('');
 
   // Handle selected item reset
   const handleItemSelect = (item: MenuItem) => {
@@ -129,13 +130,14 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
 
   const handleCartCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCartError('');
     if (cart.length === 0) return;
-    if (orderType === 'delivery' && !deliveryAddress) {
-      alert('Fadlan qor meesha lagugu soo gaarsiinayo cuntada (Location).');
+    if (orderType === 'delivery' && !deliveryAddress.trim()) {
+      setCartError('Fadlan qor meesha lagugu soo gaarsiinayo cuntada (Location).');
       return;
     }
-    if (!customerPhone) {
-      alert('Fadlan buuxi lambarkaaga taleefonka.');
+    if (!customerPhone.trim()) {
+      setCartError('Fadlan buuxi lambarkaaga taleefonka.');
       return;
     }
 
@@ -291,19 +293,9 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
         const result = await emailjs.send(serviceId, templateId, templateParams, publicKey);
         console.log("EmailJS Send Success Result:", result);
         setOrderEmailStatus('success');
-
-        // Alert success
-        alert("Dalabkaaga si guul leh ayaa loo diray! Hada waxaa laguu wareejinayaa bixinta lacagta...");
-
-        // Toos ugu wareeji garaaca taleefonka (Call Phone) qaabka USSD-ka ah (*712*771909054*lacagta#)
-        const roundedAmount = Math.round(totalAmount) || 1;
-        window.location.href = `tel:*712*771909054*${roundedAmount}%23`;
       } catch (error: any) {
         console.warn('EmailJS Order Send Notice:', error?.text || error?.message || error);
         setOrderEmailStatus('success');
-        // Fallback alert and action if email service fails or key is invalid
-        const roundedAmount = Math.round(totalAmount) || 1;
-        window.location.href = `tel:*712*771909054*${roundedAmount}%23`;
       }
     }
 
@@ -1084,6 +1076,14 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                           <code className="block bg-slate-100 p-1.5 rounded text-center text-slate-800 font-bold text-xs font-mono">
                             *712*771909054*{Math.round(cart.reduce((sum, item) => sum + item.item.price * item.quantity, 0))}#
                           </code>
+                        </div>
+                      )}
+
+                      {/* Cart error notice if validation fails */}
+                      {cartError && (
+                        <div className="p-3 bg-rose-50 border border-rose-200 rounded text-rose-800 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>{cartError}</span>
                         </div>
                       )}
 
