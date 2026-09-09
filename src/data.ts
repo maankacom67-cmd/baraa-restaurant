@@ -17,8 +17,8 @@ export const MENU_ITEMS: MenuItem[] = [
     description: 'Sambuus crispy ah oo ku habboon quraac fudud, qadada dhinaceeda ama waqti kasta oo aad rabto snack, kuna dhex jira hilib jilicsan iyo xawaashyo caraf leh.',
     price: 0.50,
     category: 'appetizer',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAt05h0Mknqj_c8gSaTWy37_ukdvwklWjmCtVl2uyuCJalk0RuxZ7ZavINjozwVLLo7fKmPxmX8Lob4bPAaiZabcCX44GcgzdI7jW48pThYUSbp2n8vtItnGPZHgHBFmwrHQ-WxuEbhA8dnmKAglVx7k3-wE9KL-GYdYGmqO4IhAUmgOgpVQz5VeJxY_Wd_-N8-YmNR_i6EoC_ZF7AHtsau4RnHVcEWepapbjbuo1ZENVpPzbJXy3uk797vVHhJ9UeTn6U',
-    alt: 'Sambuus Baraa Restaurant',
+    imageUrl: '/sambuus.jpg',
+    alt: 'Sambuus - Cunto Fudud oo Crispy ah oo Hilib ku dhex jiro | Baraa Restaurant Muqdisho',
     tags: ['Cunto Fudud', 'Hilib', 'Crispy', 'Snack'],
     isPopular: true,
     rating: 4.8
@@ -30,7 +30,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 2.00,
     category: 'appetizer',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD_jU1sWQn3wXtb5AvSXjg0wexksMAeP2Teus5Su06xHrv74vAX5-CVjTRmIXG2mPaHRZrpvMIz3f0QGNCQc8vcqya3R89eDh4V6dkLXhFyQqbqosze6yO-6EMTzuQuzp0hqCljHBJj-GqODAVGnO7xGFLm4IKTc59jNS9JUSaHETRY-wQJeba_crws59CB5pGZiwqwx79GQ9X4iZVeFM57EYQ0jIWUMBsOBjNn6fvAclaXq_jbzbkncwLUZSWxE8dcoJc',
-    alt: 'Shawaarmo Baraa Restaurant',
+    alt: 'Shawaarmo - Cunto fudud oo hilib jilicsan leh | Baraa Restaurant Muqdisho',
     tags: ['Fast Food', 'Hilib', 'Macaan'],
     rating: 4.6
   },
@@ -41,7 +41,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 1.50,
     category: 'appetizer',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBTGhPX3csgxjV4jLMv5rbbdy5L6oxDJlZp9DqfMCcC2HTDrGL1I7Zntn5I1HtnoyL8_fZnyJNGMKJRhKKNf1QpZy0DngDzsQVDLqaPK_yaH2n1TRAQMkOFDdnmimYKR5mwEBe0gYwQ1WqwFzcaqGNYTLgrqtd5Z0SALcQFDP46Ux_tJpQFwSwaCasYUr5RO0vj32VS6y12fdDRWic5LrWxB5VKKjakAmHD_WQIYW-mKljVeOP6Q71kQ0Vh-XLkN_TJdII',
-    alt: 'Baasto iyo suugo Baraa Restaurant',
+    alt: 'Baasto iyo Suugo Talyaani-Soomaali ah | Baraa Restaurant Muqdisho',
     tags: ['Pasta', 'Suugo Macaan', 'Dhaqameed'],
     rating: 4.7
   },
@@ -51,8 +51,8 @@ export const MENU_ITEMS: MenuItem[] = [
     description: 'Bariis basmati ah oo lala socodsiiyo hilib ari iyo waxyaabo kale oo cuntada dhadhankeeda kor u qaada. Waa doorashada koowaad ee qadada.',
     price: 9.50,
     category: 'main',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBL80W7NOaUyb0tikjjYGczVnV2s9SZmzIfGctCts0KOSCBD0IL-rL4T_R2JGOxjQzhvKbAEG3979uW3TGoaDmHd6Fs6ul2c-wzO302Boig-8GIlXthh-f2ECHMDXEzxvT-T8cRBlzkEHJ9iJEDd6M9wWVRuIUFEvfix_2LXKyHGt8L4Zz_aKl5xVvtbevlkf_Gxza1g-7V0LhlWSH7T1RpFle-Vs7MvTOfc4I6etkUK8KXkhszv7-Or32UkWoCQgMFnAo',
-    alt: 'Bariis iyo hilib ari Baraa Restaurant',
+    imageUrl: '/hero-food.jpg',
+    alt: 'Bariis iyo Hilib Ari - Bariis Basmati caraf leh iyo hilib ari | Baraa Restaurant Muqdisho',
     tags: ['Signature', 'Dhaqameed', 'Hilib Ari', 'Basmati'],
     isFeatured: true,
     isPopular: true,
@@ -65,7 +65,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 2.00,
     category: 'main',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAIsKIThCyuPPtvEswxSJu5_jnRZ2K_WGW3yWc6JboiE2ep3WoTSYVGhGZaFiwJSiLhwAcGs0yJowLtNsh9cA7Jgqxfsk9NRcc1maINJSWxGymcS_PnRyFFzvlmHGOdswkpAShXNbEUQCo6reqmz6ayDcOcnRvCGZpmJhd37-hfTePl0qiFdKGlVpgFzbAw5I7yxiw8LasbVWDocH7dYHZeSpG-qfuUJIZXDjFTiUMX4mOxnaJ1Q78nJR1AWCgIAnHNFWg',
-    alt: 'Sabaayad iyo hilib Baraa Restaurant',
+    alt: 'Sabaayad iyo Hilib Dhaqameed | Baraa Restaurant Muqdisho',
     tags: ['Sabaayad', 'Hilib', 'Dhaqameed'],
     isPopular: true,
     rating: 4.7
@@ -77,7 +77,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 1.50,
     category: 'main',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCuuQ6KVy1QAg4lNf_ZgZWcVyvC_LAZt6KSNbJwK5ooMcUb1r6C1DxNpsPPJ-G-rnUB6eFBF0u6fcSzkkH0xjEtJjwcQ3BZ9TmALwKh3N_x6fiClp_UsLzEenO1KgdY3DQHn_ZoPw3dkCZ_5eTKzsDU9VIhC544Av3eaUuEDLPhxs9uGKjXyuEyQEX2eXfPD6_RN8M4fZRZv2sslSXfIoqXXKyIA7IWlTlvbNWeLGza6N9gswDs32IY8ZGgL8ba6bXuNag',
-    alt: 'Sabaayad Baraa Restaurant',
+    alt: 'Sabaayad Dhaqameed jilicsan oo maraq leh | Baraa Restaurant Muqdisho',
     tags: ['Dhaqameed', 'Sabaayad', 'Maraq'],
     rating: 4.8
   },
@@ -88,7 +88,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 3.50,
     category: 'main',
     imageUrl: qudaarDiyaarImg,
-    alt: 'Qudaar diyaar ah Baraa Restaurant',
+    alt: 'Qudaar Diyaar ah - Saxan miro iyo khudaar dabiici ah oo cusub | Baraa Restaurant Muqdisho',
     tags: ['Miro Dabiici ah', 'Vegan', 'Caafimaad'],
     rating: 4.9
   },
@@ -99,7 +99,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 6.50,
     category: 'main',
     imageUrl: pizzaDeluxeImg,
-    alt: 'Pizza Deluxe Baraa Restaurant',
+    alt: 'Pizza Deluxe - Pitsa cusub oo jiis dhalaalaya iyo boqoshaada leh | Baraa Restaurant Muqdisho',
     tags: ['Pizza', 'Cheese', 'Cusub', 'Hot & Fresh'],
     isPopular: true,
     isFeatured: true,
@@ -111,8 +111,8 @@ export const MENU_ITEMS: MenuItem[] = [
     description: 'Casiir dabiici ah oo aad u qabow oo laga soo miiqay cambaha cusub ee dalkeena, iyadoo aan lagu darin wax sonkor macmal ah.',
     price: 2.50,
     category: 'drink',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDnm9dZgyrp0IzXmxx-uYBDzG_pREbJ2260ZC_MkTaOBshf45ju2isyFjhHljNuNa_t7wK0lOq6mcwv3tJtRNrCbUhZnykWLdKc7GmOKyQOnmvcCFL2WB9vEb1dq1bwWDypLV8p4ziwqnxWUEF4vjOAeDhkDKJPYNyQCxQyrKWdkEEKrLIebuJtd1uW7W_jMJjIVemBRxFrTYp8pDgAI9eeAjeIkB5ga6qxDuac4IglmJ8QzJ3zEJZm5r_PfxbTrfzQ6JA',
-    alt: 'Casiirka cambaha Baraa Restaurant',
+    imageUrl: '/juice.jpg',
+    alt: 'Cabitaan Dabiici ah - Casiir qabow oo Cambe iyo Xabxab ah | Baraa Restaurant Muqdisho',
     tags: ['Qabow', 'Cusub', 'Fruit', 'Mango'],
     isPopular: true,
     rating: 4.7
@@ -124,7 +124,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 1.50,
     category: 'drink',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA1hneLuebazSW3S6RMRhDWlFkTD1Baw_QkLkzO5WKkvX1aCRCCxm48vtltB7XrMeFfWvknH_6oSavBWmuUY11E5qWnPApijbYqvcUpRJ_9wbSSDCAas81g2LzHKoZSfK_XG38WcSmCfMmmp5_wxKRrBjMtM-IEJclM5MevdUa408n1xdSslKeFBMBjRGZBgnR7Zn-ZnL7l90m6q-r8xB1oFR8TMJ-RcPsSUcuHL_17gDLNZnDFwVUwZP8x1JJuBnFN8F0',
-    alt: 'Coffee Latte Art Baraa Restaurant',
+    alt: 'Coffee Latte Art - Qaxwo casri ah oo farshaxan qurux badan leh | Baraa Restaurant Muqdisho',
     tags: ['Kuleyl', 'Coffee', 'Latte Art'],
     rating: 4.8
   },
@@ -135,7 +135,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 1.50,
     category: 'dessert',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAI-IfsH3kqnWbdJp6z1lx4Z_s3CA6Yoo6TIuUTjvJykLRwYD7nLgy3rXGFtXt9Ci5EsCmrByBpXQyzg-ZPIxPmHe1foFiIHV89LHP6uPksi12Eof0fOq3UrgkBZ-wSYQgif8YC-R0xx0gDt3X06AJeg2EJpTj7gGNjr20g0sL2PPszsQHuEdkUL22sDxNmReS0rhmICB9umA6vR6uJ3ODdZRwHQTNIIPbPLrAbGeIm4YaKS-rBvIxJoNgcYxNazwfkuWQ',
-    alt: 'Tiramisu Special Baraa Restaurant',
+    alt: 'Tiramisu Special - Macmacaan kareem Talyaani ah iyo qaxwo leh | Baraa Restaurant Muqdisho',
     tags: ['Premium', 'Chocolate', 'Macaan'],
     isFeatured: true,
     rating: 4.9
@@ -147,7 +147,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 1.00,
     category: 'dessert',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCoPed7BS6WR25zbgCAMHgjJ9kiu9szb3BvWv_GiWPPZXEb1vVKHzLFNlaOzj-MPmbYKrlqwO8Bp2FSuMbzItXtkstyyXoB-i9AL3OQ_59zvKsOwcIt2p0s7TmBTvzFie7JXVBWdUta_dLlm-GX4Ky1dzdbHuGrGDBOBYTzhN-pIg5BuOqQQDteqUB6ITKS_L-qpFOI5IRViGL4pTKZI2OGDgBoT9qrf3s28yBM8pa5nl4HOGp0LZCuq99JbZeVWieqZMg',
-    alt: 'Macmacaanka Baraa Ice Cream Baraa Restaurant',
+    alt: 'Macmacaanka Baraa Ice Cream - Iskiriin qabow oo jilicsan | Baraa Restaurant Muqdisho',
     tags: ['Jalaato', 'Shukulaato', 'Qabow'],
     rating: 4.7
   }

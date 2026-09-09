@@ -91,28 +91,40 @@ export default function App() {
                   <div className="lg:col-span-7 grid grid-cols-2 gap-3 sm:gap-4 h-[320px] sm:h-[440px] lg:h-[550px]">
                     <div className="relative overflow-hidden rounded-md col-span-1 row-span-2 border border-gray-200 shadow-md group">
                       <img
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzEemIynUqKSJqt2boD0uBdv4JIkCwYKgRJub_bRKHt0aNrMFSAqluj__RNLB9zQESnUTYnw4-WzXiX1KUvqa_mvq0-AxhwO0UWjDXShZ-E63-jt65sPXJ34vda30uCEBnalQwkgd53FdX0D4vJpfyBO4l8dEnUIR4Tsqv6gTCJKMd_4DaoiX8Z37L3LUx8_jPXQrQCd-I74gY6ORvBSKJSURKUAfLd1C9zGlc_wIFibTJupAifpM5dHZQUOjc7Pz6ss0"
-                        alt="Baraa Restaurant maqaayad online ah Muqdisho"
+                        src="/hero-food.jpg"
+                        alt="Bariis iyo Hilib Ari basmati ah - Baraa Restaurant Muqdisho"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                      <div className="absolute bottom-3 left-3 right-3 text-white">
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-gold-500/90 text-primary-950 px-2 py-0.5 rounded inline-block mb-1">Dhaqameed</span>
+                        <p className="text-xs sm:text-sm font-bold truncate">Bariis iyo Hilib Ari</p>
+                      </div>
                     </div>
                     <div className="relative overflow-hidden rounded-md col-span-1 row-span-1 border border-gray-200 shadow-md group">
                       <img
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPDr7Ng5MEIso-WCHqf-zTG8AgFv7VnG0TbOx_7r7Wa_whMB1DgHM3KH1jzG-AVktp_xKfjAtZPcMEV-P5kaABE3YN4qidpQFL0aQrJ-sN59QRzpkYl-MWaTD_43nqlwL8NHHdV5E9J7ZF8uKuRKQaKlY2c8nFZL8JCuhf7UpXmMGPtQGr5f7GW8zINr2QF_gbn6WdUWzBnj6xGvUl5pLsB-dYcZqRT58wdjqMckUE-gY8da37JBG-yeR3Y7Wh_jeMleQ"
-                        alt="Cuntooyin kala duwan Baraa Restaurant Muqdisho"
+                        src="/sambuus.jpg"
+                        alt="Sambuus crispy ah oo hilib leh - Baraa Restaurant Muqdisho"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                      <div className="absolute bottom-2 left-2.5 right-2 text-white">
+                        <p className="text-xs font-bold truncate">Sambuus Crispy</p>
+                      </div>
                     </div>
                     <div className="relative overflow-hidden rounded-md col-span-1 row-span-1 border border-gray-200 shadow-md group">
                       <img
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuBajBZkS8d3TPsYKJlmYJXC9zR1efD2_yMbz_yCmf4IcUV_YX-rFOnFdSFbopSZC8U0ArLMLsttfl6thzPNo1qMHU9wMPi-_7mLmY4muvtdrFqTM-bO_FGW_r4eBgdGcyc-cVogV4_fh4zpSf3etDix7IxTqwFkU2HR1DYqX6spmfhWO6eQhmo-Fp_SbhT1cugDWYCLk5gGMR0njsq6IiAri8Pgt9JOriyYA6gSdukLoJNOQMauYRW5nOjAuHPtVVd_PY4"
-                        alt="Baraa Restaurant menu Muqdisho"
+                        src="/juice.jpg"
+                        alt="Cabitaanno dabiici ah oo qabow - Baraa Restaurant Muqdisho"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                      <div className="absolute bottom-2 left-2.5 right-2 text-white">
+                        <p className="text-xs font-bold truncate">Cabitaanno Dabiici ah</p>
+                      </div>
                     </div>
                   </div>
 
@@ -138,7 +150,7 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-6 md:gap-8">
                     {[
                       MENU_ITEMS.find((item) => item.id === 'main-1') || MENU_ITEMS[3],
-                      MENU_ITEMS.find((item) => item.id === 'main-5') || MENU_ITEMS[7],
+                      MENU_ITEMS.find((item) => item.id === 'app-1') || MENU_ITEMS[0],
                       MENU_ITEMS.find((item) => item.id === 'drink-1') || MENU_ITEMS[8]
                     ].filter(Boolean).map((item) => (
                       <div
