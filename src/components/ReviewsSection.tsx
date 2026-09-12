@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, MessageSquare, Plus, PlusCircle, Calendar, User, Heart, ThumbsUp } from 'lucide-react';
+import { Star, MessageSquare, Plus, PlusCircle, Calendar, User, Heart, ThumbsUp, AlertCircle } from 'lucide-react';
 import { REVIEWS, MENU_ITEMS } from '../data';
 import { Review } from '../types';
 
@@ -16,6 +16,7 @@ export default function ReviewsSection() {
   const [showForm, setShowForm] = useState(false);
   const [likes, setLikes] = useState<Record<string, number>>({});
   const [formSuccess, setFormSuccess] = useState(false);
+  const [formError, setFormError] = useState('');
 
   // Load reviews from server API or fallback to localStorage on mount
   useEffect(() => {
@@ -50,16 +51,17 @@ export default function ReviewsSection() {
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !comment) {
-      alert('Fadlan buuxi magacaaga iyo faalladaada.');
+    setFormError('');
+    if (!name.trim() || !comment.trim()) {
+      setFormError('Fadlan buuxi magacaaga iyo faalladaada.');
       return;
     }
 
     const newReview: Review = {
       id: Math.random().toString(36).substring(2, 9),
-      name,
+      name: name.trim(),
       rating,
-      comment,
+      comment: comment.trim(),
       dishName: selectedDish || undefined,
       date: 'Maanta',
     };
@@ -246,7 +248,10 @@ export default function ReviewsSection() {
                         id="rev-name"
                         required
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          if (formError) setFormError('');
+                        }}
                         placeholder="Tusaale: Nimco Warsame"
                         className="w-full bg-slate-50 text-slate-900 text-sm py-2.5 px-4 rounded border border-gray-200 focus:outline-none focus:border-gold-500 transition-colors"
                       />
@@ -308,11 +313,21 @@ export default function ReviewsSection() {
                       required
                       rows={3}
                       value={comment}
-                      onChange={(e) => setComment(e.target.value)}
+                      onChange={(e) => {
+                        setComment(e.target.value);
+                        if (formError) setFormError('');
+                      }}
                       placeholder="Qor halkaan wixii khibrad ah oo aad ka heshay cuntada, adeegga, ama nadaafadda..."
                       className="w-full bg-slate-50 text-slate-900 text-sm py-3 px-4 rounded border border-gray-200 focus:outline-none focus:border-gold-500 transition-colors resize-none"
                     />
                   </div>
+
+                  {formError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded text-rose-800 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{formError}</span>
+                    </div>
+                  )}
 
                   {/* Buttons */}
                   <div className="flex justify-end gap-3 pt-2">

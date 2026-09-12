@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Heart, Star, Sparkles, X, ShoppingCart, MessageSquare, 
   MapPin, Phone, ShoppingBag, CreditCard, CheckCircle2, ArrowLeft, 
-  Mail, PhoneCall, AlertCircle, Settings, Plus, Minus, Check, Trash2
+  Mail, PhoneCall, AlertCircle, Settings, Plus, Minus, Check, Trash2, ExternalLink
 } from 'lucide-react';
 import { MENU_ITEMS, CATEGORIES } from '../data';
 import { MenuItem } from '../types';
@@ -11,6 +11,7 @@ import emailjs from '@emailjs/browser';
 import { sendOrderToFirebase, handleOrderSubmit } from '../lib/firebase';
 import { sendTelegramOrderNotification, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from '../lib/telegram';
 import OrderForm from './OrderForm';
+import LocationPicker from './LocationPicker';
 
 interface MenuShowcaseProps {
   onBookClick: () => void;
@@ -39,6 +40,15 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [cartLocationState, setCartLocationState] = useState<{
+    locationLink: string;
+    coords: { lat: number; lng: number } | null;
+    addressText: string;
+  }>({
+    locationLink: '',
+    coords: null,
+    addressText: '',
+  });
   const [orderType, setOrderType] = useState<'delivery' | 'takeaway'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<'EVC Plus' | 'Zaad' | 'Sahal'>('EVC Plus');
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
@@ -132,8 +142,8 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
     e.preventDefault();
     setCartError('');
     if (cart.length === 0) return;
-    if (orderType === 'delivery' && !deliveryAddress.trim()) {
-      setCartError('Fadlan qor meesha lagugu soo gaarsiinayo cuntada (Location).');
+    if (orderType === 'delivery' && !deliveryAddress.trim() && !cartLocationState.locationLink && !cartLocationState.addressText.trim()) {
+      setCartError('Fadlan qor ciwaankaaga ama riix badanka GPS si Location-kaaga loo helo.');
       return;
     }
     if (!customerPhone.trim()) {
@@ -164,7 +174,15 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       (cartItem) => `${cartItem.item.name} (x${cartItem.quantity})`
     ).join(', ');
 
-    const finalAddress = orderType === 'takeaway' ? 'Maqaayada ayaan imaanayaa (Takeaway)' : deliveryAddress;
+    const finalAddress = orderType === 'takeaway' 
+      ? 'Maqaayada ayaan imaanayaa (Takeaway)' 
+      : (cartLocationState.addressText || deliveryAddress || 'Muqdisho');
+
+    const finalLocationLink = orderType === 'takeaway'
+      ? ''
+      : (cartLocationState.coords
+          ? `https://maps.google.com/?q=${cartLocationState.coords.lat},${cartLocationState.coords.lng}`
+          : (cartLocationState.locationLink || (finalAddress && finalAddress !== 'Muqdisho' ? `https://maps.google.com/?q=${encodeURIComponent(finalAddress + ', Mogadishu')}` : '')));
 
     // Build the HTML-formatted table string for cart items exactly as requested
     let cunnooyinHTML = "";
@@ -201,6 +219,8 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       customerName: customerName || 'Macmiil',
       customerPhone,
       deliveryAddress: finalAddress,
+      locationLink: finalLocationLink,
+      coords: cartLocationState.coords,
       itemName: itemsBrief,
       itemPrice: 0,
       quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
@@ -265,22 +285,57 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       admin_email: 'maankacom66@gmail.com'
     };
 
-    // 1. Send automated alert to Telegram Bot (Token: 8992339748:AAHVoYo1Mfwpqp3dW4E070mkahSWALqfbdw, Chat ID: 7718402252)
+    // 1. Send to Backend Database API (which will dispatch Telegram alert with deduplication)
+    const foodSummary = itemsBrief || cart.map(c => `${c.item.name} (${c.quantity}x)`).join(', ');
+    let telegramDispatchedOnServer = false;
     try {
-      const foodSummary = itemsBrief || cart.map(c => `${c.item.name} (${c.quantity}x)`).join(', ');
-      await sendTelegramOrderNotification({
-        name: customerName || 'Macmiil',
-        phone: customerPhone,
-        food: foodSummary,
-        address: finalAddress,
-        total: `$${totalAmount.toFixed(2)}`,
-        orderType: orderType === 'takeaway' ? 'Takeaway' : 'Delivery',
-        paymentMethod: paymentMethod,
-        orderCode: orderCode
+      const orderResp = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: orderDetails.id,
+          customerName: orderDetails.customerName,
+          customerPhone: orderDetails.customerPhone,
+          address: orderDetails.deliveryAddress,
+          locationLink: finalLocationLink,
+          coords: cartLocationState.coords,
+          notes: cartNotes || 'Mani jiro',
+          food: foodSummary,
+          orderType,
+          paymentMethod,
+          items: cart,
+          totalAmount,
+          orderCode,
+        }),
       });
-      console.log('Telegram order notification sent successfully');
-    } catch (tgErr) {
-      console.warn('Telegram notification error:', tgErr);
+      if (orderResp.ok) {
+        const respJson = await orderResp.json();
+        telegramDispatchedOnServer = !!respJson.telegramSent;
+      }
+    } catch (dbErr) {
+      console.warn('Could not save order to backend database API', dbErr);
+    }
+
+    // 2. Fallback: If backend didn't send alert, dispatch via client proxy
+    if (!telegramDispatchedOnServer) {
+      try {
+        await sendTelegramOrderNotification({
+          name: customerName || 'Macmiil',
+          phone: customerPhone,
+          food: foodSummary,
+          address: finalAddress,
+          locationLink: finalLocationLink,
+          total: `$${totalAmount.toFixed(2)}`,
+          orderType: orderType === 'takeaway' ? 'Takeaway' : 'Delivery',
+          paymentMethod: paymentMethod,
+          orderCode: orderCode,
+          notes: cartNotes || 'Mani jiro'
+        });
+      } catch (tgErr) {
+        console.warn('Telegram notification error:', tgErr);
+      }
     }
 
     if (serviceId && templateId && publicKey) {
@@ -305,6 +360,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
         name: customerName || "Macmiil",
         phone: customerPhone || "",
         location: finalAddress || "",
+        locationLink: finalLocationLink,
         deliveryMethod: orderType === 'takeaway' ? 'Takeaway' : 'Home Delivery',
         paymentMethod: paymentMethod || "EVC Plus",
         totalAmount: typeof totalAmount === 'number' ? `$${totalAmount.toFixed(2)}` : (totalAmount || "$0.00")
@@ -318,28 +374,6 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       await handleOrderSubmit(formData, cartItems);
     } catch (fbErr) {
       console.warn('Could not save order to Firebase:', fbErr);
-    }
-
-    // Save order details to the backend database API
-    try {
-      await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: orderDetails.id,
-          customerName: orderDetails.customerName,
-          customerPhone: orderDetails.customerPhone,
-          address: orderDetails.deliveryAddress,
-          orderType,
-          paymentMethod,
-          items: cart,
-          totalAmount,
-        }),
-      });
-    } catch (dbErr) {
-      console.warn('Could not save order to backend database API', dbErr);
     }
 
     setPlacedOrderDetails(orderDetails);
@@ -836,6 +870,23 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                         <span className="text-slate-500">Meesha la gaynayo (Location):</span>
                         <span className="font-semibold text-slate-800 text-right">{placedOrderDetails.deliveryAddress}</span>
 
+                        {placedOrderDetails.locationLink && (
+                          <>
+                            <span className="text-slate-500">Location Link:</span>
+                            <span className="text-right">
+                              <a 
+                                href={placedOrderDetails.locationLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-gold-700 hover:text-gold-800 underline font-mono text-[11px] inline-flex items-center gap-1"
+                              >
+                                <span>Google Maps Link</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </span>
+                          </>
+                        )}
+
                         <span className="text-slate-500 font-bold">Isugeynta guud:</span>
                         <span className="font-bold text-gold-700 text-right text-sm">${placedOrderDetails.totalAmount.toFixed(2)}</span>
                       </div>
@@ -992,30 +1043,28 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Location / Takeaway Info */}
-                        {orderType === 'delivery' ? (
-                          <div>
-                            <label className="block text-[11px] font-sans font-bold text-gray-700 mb-1 flex items-center gap-1">
-                              <MapPin className="w-3.5 h-3.5 text-gold-600" />
-                              📍 Meesha aad joogto (Location) *
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="Tusaale: Hodan, Muqdisho"
-                              value={deliveryAddress}
-                              onChange={(e) => setDeliveryAddress(e.target.value)}
-                              className="w-full bg-slate-50 text-xs p-2.5 rounded border border-gray-200 focus:outline-none focus:border-gold-500 transition-colors"
-                            />
-                          </div>
-                        ) : (
-                          <div className="bg-amber-50/70 border border-amber-100 p-2.5 rounded-md flex items-start gap-2 text-amber-900 text-[11px] font-sans h-full">
-                            <span className="text-sm shrink-0">📍</span>
-                            <span>Cuntada waxaa laguugu diyaarin doonaa <strong>Maqaayada Barada</strong> si aad adigu halkaas uga qaadato marka ay diyaar noqoto.</span>
-                          </div>
-                        )}
+                      {/* Location / Takeaway Info */}
+                      {orderType === 'delivery' ? (
+                        <div>
+                          <LocationPicker
+                            locationLink={cartLocationState.locationLink}
+                            coords={cartLocationState.coords}
+                            addressText={cartLocationState.addressText || deliveryAddress}
+                            onChange={(val) => {
+                              setCartLocationState(val);
+                              setDeliveryAddress(val.addressText);
+                            }}
+                            required={true}
+                          />
+                        </div>
+                      ) : (
+                        <div className="bg-amber-50/70 border border-amber-100 p-3 rounded-md flex items-start gap-2 text-amber-900 text-[11px] font-sans">
+                          <span className="text-base shrink-0">📍</span>
+                          <span>Cuntada waxaa laguugu diyaarin doonaa <strong>Maqaayada Barada</strong> si aad adigu halkaas uga qaadato marka ay diyaar noqoto.</span>
+                        </div>
+                      )}
 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Phone */}
                         <div>
                           <label className="block text-[11px] font-sans font-bold text-gray-700 mb-1 flex items-center gap-1">
@@ -1031,9 +1080,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                             className="w-full bg-slate-50 text-xs p-2.5 rounded border border-gray-200 focus:outline-none focus:border-gold-500 transition-colors"
                           />
                         </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Name (Optional) */}
                         <div>
                           <label className="block text-[11px] font-sans font-bold text-gray-700 mb-1">
@@ -1047,23 +1094,23 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                             className="w-full bg-slate-50 text-xs p-2.5 rounded border border-gray-200 focus:outline-none focus:border-gold-500 transition-colors"
                           />
                         </div>
+                      </div>
 
-                        {/* Payment Method */}
-                        <div>
-                          <label className="block text-[11px] font-sans font-bold text-gray-700 mb-1 flex items-center gap-1">
-                            <CreditCard className="w-3.5 h-3.5 text-gold-600" />
-                            💳 Qaybta Lacag Bixinta *
-                          </label>
-                          <select
-                            value={paymentMethod}
-                            onChange={(e) => setPaymentMethod(e.target.value as any)}
-                            className="w-full p-2.5 bg-slate-50 border rounded text-xs focus:outline-none focus:border-gold-500 transition-colors"
-                          >
-                            <option value="EVC Plus">EVC Plus</option>
-                            <option value="Zaad">Zaad</option>
-                            <option value="Sahal">Sahal</option>
-                          </select>
-                        </div>
+                      {/* Payment Method */}
+                      <div>
+                        <label className="block text-[11px] font-sans font-bold text-gray-700 mb-1 flex items-center gap-1">
+                          <CreditCard className="w-3.5 h-3.5 text-gold-600" />
+                          💳 Qaybta Lacag Bixinta *
+                        </label>
+                        <select
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value as any)}
+                          className="w-full p-2.5 bg-slate-50 border rounded text-xs focus:outline-none focus:border-gold-500 transition-colors"
+                        >
+                          <option value="EVC Plus">EVC Plus</option>
+                          <option value="Zaad">Zaad</option>
+                          <option value="Sahal">Sahal</option>
+                        </select>
                       </div>
 
                       {/* Live Interactive USSD payment advice */}

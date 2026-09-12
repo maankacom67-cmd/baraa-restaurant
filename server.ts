@@ -170,6 +170,24 @@ app.delete('/api/bookings', (req, res) => {
   res.json({ success: true, message: 'Dhammaan ballansashooyinka waa la tirtiray.' });
 });
 
+// Cache for deduplicating Telegram order alerts to prevent multiple alerts for the same order
+const sentOrderAlerts = new Map<string, number>();
+
+function shouldSendOrderAlert(key: string): boolean {
+  const now = Date.now();
+  const lastTime = sentOrderAlerts.get(key);
+  if (lastTime && now - lastTime < 60000) {
+    return false; // Already sent within 60 seconds
+  }
+  sentOrderAlerts.set(key, now);
+  if (sentOrderAlerts.size > 200) {
+    for (const [k, t] of sentOrderAlerts.entries()) {
+      if (now - t > 120000) sentOrderAlerts.delete(k);
+    }
+  }
+  return true;
+}
+
 // 2. ORDERS (Dalabaadka)
 app.get('/api/orders', (req, res) => {
   const orders = readJSON(ORDERS_FILE);
@@ -201,12 +219,22 @@ app.post('/api/orders', async (req, res) => {
   const totalAmount = isNaN(rawTotal) ? 0 : rawTotal;
 
   const orders = readJSON(ORDERS_FILE);
-  const orderCode = orderData.orderCode || `ORD-${Date.now().toString().substring(8)}`;
+  const orderCode = orderData.orderCode || `BR-ORD-${Date.now().toString().slice(-6)}`;
+  
+  const locationLink = orderData.locationLink || 
+    (orderData.coords ? `https://maps.google.com/?q=${orderData.coords.lat},${orderData.coords.lng}` : 
+    (address && address !== 'Muqdisho' ? `https://maps.google.com/?q=${encodeURIComponent(address + ', Mogadishu')}` : ''));
+
+  const userNotes = orderData.notes || orderData.cartNotes || orderData.requests || (address && address !== 'Muqdisho' ? address : 'Mani jiro');
+
   const newOrder = {
     id: orderData.id || Math.random().toString(36).substring(2, 9),
     customerName,
     customerPhone,
     address,
+    locationLink,
+    coords: orderData.coords || null,
+    notes: userNotes,
     food: foodItem,
     orderType: orderData.orderType || 'takeaway',
     paymentMethod: orderData.paymentMethod || 'EVC Plus',
@@ -222,37 +250,51 @@ app.post('/api/orders', async (req, res) => {
   orders.unshift(newOrder);
   writeJSON(ORDERS_FILE, orders);
 
-  // Send Telegram Notification on server
-  const formattedTotal = totalAmount > 0 ? `$${totalAmount.toFixed(2)}` : (orderData.total || 'Aan la sheegin');
-  const tgHtml =
-    `🍕 <b>DALAB CUNTO CUSUB! (BARAA)</b>\n\n` +
-    `👤 <b>Macmiilka:</b> ${escapeHtml(customerName)}\n` +
-    `📞 <b>Telefoonka:</b> ${escapeHtml(customerPhone)}\n` +
-    `🍔 <b>Cuntada:</b> ${escapeHtml(foodItem)}\n` +
-    `📍 <b>Ciwaanka:</b> ${escapeHtml(address)}\n` +
-    `💰 <b>Wadarta:</b> ${escapeHtml(formattedTotal)}\n` +
-    `💳 <b>Lacag Bixinta:</b> ${escapeHtml(newOrder.paymentMethod)}\n` +
-    `🛵 <b>Nooca:</b> ${escapeHtml(newOrder.orderType)}\n` +
-    `🔖 <b>Code:</b> ${escapeHtml(orderCode)}`;
+  // Send Telegram Notification on server with deduplication
+  const dedupeKey = orderCode || `${customerPhone}_${foodItem}`;
+  let telegramSent = false;
+  if (shouldSendOrderAlert(dedupeKey)) {
+    const formattedTotal = totalAmount > 0 ? `$${totalAmount.toFixed(2)}` : (orderData.total || '$0.00');
+    const tgHtml =
+      `🍽️ <b>DALAB CUSUB - BARAA RESTAURANT</b>\n\n` +
+      `👤 <b>Magaca:</b> ${escapeHtml(customerName)}\n` +
+      `📞 <b>Taleefanka:</b> ${escapeHtml(customerPhone)}\n` +
+      `🍲 <b>Cuntada / Items:</b> ${escapeHtml(foodItem)}\n` +
+      `💰 <b>Qiimaha:</b> ${escapeHtml(formattedTotal)}\n` +
+      `💳 <b>Lacag Bixinta:</b> ${escapeHtml(newOrder.paymentMethod)}\n` +
+      `🏷️ <b>Code:</b> ${escapeHtml(orderCode)}\n` +
+      `📝 <b>Fariin:</b> ${escapeHtml(userNotes)}\n` +
+      (locationLink ? `\n📍 <b>Location-ka:</b> ${escapeHtml(locationLink)}` : '');
 
-  sendTelegramAlert(tgHtml).catch(() => {});
+    sendTelegramAlert(tgHtml).catch(() => {});
+    telegramSent = true;
+  }
 
-  res.status(201).json({ success: true, order: newOrder });
+  res.status(201).json({ success: true, order: newOrder, telegramSent });
 });
 
 // Dedicated Telegram API endpoints for direct triggers
 app.post('/api/telegram/order', async (req, res) => {
-  const { name, phone, food, address, total, orderType, paymentMethod, orderCode } = req.body;
+  const { name, phone, food, address, locationLink, total, paymentMethod, orderCode, notes } = req.body;
+  const dedupeKey = orderCode || `${phone}_${food}_${total}`;
+  if (!shouldSendOrderAlert(dedupeKey)) {
+    return res.json({ success: true, deduplicated: true });
+  }
+
+  const formattedTotal = typeof total === 'number' ? `$${total.toFixed(2)}` : (total || '$0.00');
+  const userNotes = notes || (address && address !== 'Muqdisho' ? address : 'Mani jiro');
+  const linkText = locationLink || (address && address !== 'Muqdisho' ? `https://maps.google.com/?q=${encodeURIComponent(address + ', Mogadishu')}` : '');
+
   const tgHtml =
-    `🍕 <b>DALAB CUNTO CUSUB! (BARAA)</b>\n\n` +
-    `👤 <b>Macmiilka:</b> ${escapeHtml(name || 'Macmiil')}\n` +
-    `📞 <b>Telefoonka:</b> ${escapeHtml(phone || 'Aan la sheegin')}\n` +
-    `🍔 <b>Cuntada:</b> ${escapeHtml(food || 'Aan la sheegin')}\n` +
-    `📍 <b>Ciwaanka:</b> ${escapeHtml(address || 'Muqdisho')}` +
-    (total ? `\n💰 <b>Wadarta:</b> ${escapeHtml(typeof total === 'number' ? `$${total.toFixed(2)}` : total)}` : '') +
-    (paymentMethod ? `\n💳 <b>Lacag Bixinta:</b> ${escapeHtml(paymentMethod)}` : '') +
-    (orderType ? `\n🛵 <b>Nooca:</b> ${escapeHtml(orderType)}` : '') +
-    (orderCode ? `\n🔖 <b>Code:</b> ${escapeHtml(orderCode)}` : '');
+    `🍽️ <b>DALAB CUSUB - BARAA RESTAURANT</b>\n\n` +
+    `👤 <b>Magaca:</b> ${escapeHtml(name || 'Macmiil')}\n` +
+    `📞 <b>Taleefanka:</b> ${escapeHtml(phone || 'Aan la sheegin')}\n` +
+    `🍲 <b>Cuntada / Items:</b> ${escapeHtml(food || 'Aan la sheegin')}\n` +
+    `💰 <b>Qiimaha:</b> ${escapeHtml(formattedTotal)}\n` +
+    `💳 <b>Lacag Bixinta:</b> ${escapeHtml(paymentMethod || 'EVC Plus')}\n` +
+    `🏷️ <b>Code:</b> ${escapeHtml(orderCode || 'BR-ORD-123456')}\n` +
+    `📝 <b>Fariin:</b> ${escapeHtml(userNotes)}\n` +
+    (linkText ? `\n📍 <b>Location-ka:</b> ${escapeHtml(linkText)}` : '');
 
   const sent = await sendTelegramAlert(tgHtml);
   res.json({ success: sent });

@@ -5,11 +5,13 @@ export interface TelegramOrderPayload {
   name: string;
   phone: string;
   food: string;
-  address: string;
+  address?: string;
+  locationLink?: string;
   total?: string | number;
   orderType?: string;
   paymentMethod?: string;
   orderCode?: string;
+  notes?: string;
 }
 
 export interface TelegramReservationPayload {
@@ -54,31 +56,24 @@ export async function sendTelegramOrderNotification(payload: TelegramOrderPayloa
   }
 
   // 2. Direct browser fallback (for static deployment environments)
-  const { name, phone, food, address, total, orderType, paymentMethod, orderCode } = payload;
+  const { name, phone, food, address, locationLink, total, paymentMethod, orderCode, notes } = payload;
   const botToken = TELEGRAM_BOT_TOKEN;
   const chatId = TELEGRAM_CHAT_ID;
 
-  let extraLines = '';
-  if (total) {
-    extraLines += `\n💰 <b>Wadarta:</b> ${escapeHtml(typeof total === 'number' ? `$${total.toFixed(2)}` : total)}`;
-  }
-  if (paymentMethod) {
-    extraLines += `\n💳 <b>Lacag Bixinta:</b> ${escapeHtml(paymentMethod)}`;
-  }
-  if (orderType) {
-    extraLines += `\n🛵 <b>Nooca:</b> ${escapeHtml(orderType)}`;
-  }
-  if (orderCode) {
-    extraLines += `\n🔖 <b>Code:</b> ${escapeHtml(orderCode)}`;
-  }
+  const formattedTotal = typeof total === 'number' ? `$${total.toFixed(2)}` : (total || '$0.00');
+  const userNotes = notes || (address ? address : 'Mani jiro');
+  const linkText = locationLink || (address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : '');
 
   const htmlMessage =
-    `🍕 <b>DALAB CUNTO CUSUB!</b>\n\n` +
-    `👤 <b>Magaca:</b> ${escapeHtml(name || 'Aan la sheegin')}\n` +
-    `📞 <b>Nambarka:</b> ${escapeHtml(phone || 'Aan la sheegin')}\n` +
-    `🍔 <b>Cuntada:</b> ${escapeHtml(food || 'Aan la sheegin')}\n` +
-    `📍 <b>Ciwaanka:</b> ${escapeHtml(address || 'Aan la sheegin')}` +
-    extraLines;
+    `🍽️ <b>DALAB CUSUB - BARAA RESTAURANT</b>\n\n` +
+    `👤 <b>Magaca:</b> ${escapeHtml(name || 'Macmiil')}\n` +
+    `📞 <b>Taleefanka:</b> ${escapeHtml(phone || 'Aan la sheegin')}\n` +
+    `🍲 <b>Cuntada / Items:</b> ${escapeHtml(food || 'Aan la sheegin')}\n` +
+    `💰 <b>Qiimaha:</b> ${escapeHtml(formattedTotal)}\n` +
+    `💳 <b>Lacag Bixinta:</b> ${escapeHtml(paymentMethod || 'EVC Plus')}\n` +
+    `🏷️ <b>Code:</b> ${escapeHtml(orderCode || 'BR-ORD-123456')}\n` +
+    `📝 <b>Fariin:</b> ${escapeHtml(userNotes)}\n` +
+    (linkText ? `\n📍 <b>Location-ka:</b> ${escapeHtml(linkText)}` : '');
 
   try {
     const postRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

@@ -49,3 +49,24 @@ export interface Chef {
   imageUrl: string;
   signatureDish: string;
 }
+
+export interface Order {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  locationLink?: string;
+  coords?: { lat: number; lng: number } | null;
+  food: string;
+  orderType: 'delivery' | 'takeaway';
+  paymentMethod: string;
+  items?: any[];
+  totalAmount: number;
+  date?: string;
+  time?: string;
+  status?: string;
+  orderCode: string;
+  notes?: string;
+  createdAt: string;
+}
+
