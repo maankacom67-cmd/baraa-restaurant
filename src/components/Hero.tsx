@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 
 interface HeroProps {
-  setCurrentTab: (tab: 'home' | 'menu' | 'about' | 'book') => void;
+  setCurrentTab: (tab: 'home' | 'menu' | 'about' | 'book' | 'reviews') => void;
 }
 
 export default function Hero({ setCurrentTab }: HeroProps) {
@@ -67,14 +67,26 @@ export default function Hero({ setCurrentTab }: HeroProps) {
         >
           <button
             onClick={() => setCurrentTab('book')}
-            className="bg-gold-300 hover:bg-gold-400 text-primary-950 font-sans font-bold text-[10px] sm:text-xs tracking-widest px-5 py-3 rounded-none transition-all cursor-pointer hover:scale-105 active:scale-95"
+            className="bg-transparent hover:bg-white/10 text-white font-sans font-bold text-[10px] sm:text-xs tracking-widest px-5 py-3 rounded-none border border-solid border-white transition-all cursor-pointer hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: 'transparent',
+              borderColor: '#ffffff',
+              color: '#ffffff',
+              borderStyle: 'solid',
+            }}
           >
             DALBO MIIS
           </button>
           
           <button
             onClick={() => setCurrentTab('menu')}
-            className="bg-transparent hover:bg-white/5 text-white font-sans font-bold text-[10px] sm:text-xs tracking-widest px-5 py-3 rounded-none border border-white/20 hover:border-white/40 transition-all cursor-pointer hover:scale-105 active:scale-95"
+            className="bg-[#ffd82a] text-white font-sans font-bold text-[10px] sm:text-xs tracking-widest px-5 py-3 rounded-none border border-solid border-white hover:brightness-105 transition-all cursor-pointer hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: '#ffd82a',
+              color: '#ffffff',
+              borderColor: '#ffffff',
+              borderStyle: 'solid',
+            }}
           >
             FIIRI MENYADA
           </button>

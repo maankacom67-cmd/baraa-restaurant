@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { Send, CheckCircle2, AlertCircle, ShoppingBag, Phone, User, Utensils, Sparkles, Loader2, CreditCard, MessageSquare, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Send, CheckCircle2, AlertCircle, ShoppingBag, Phone, User, Utensils, 
+  Sparkles, Loader2, MessageSquare, PhoneCall, Copy, Check, MapPin 
+} from 'lucide-react';
 import { MENU_ITEMS } from '../data';
 import { sendTelegramOrderNotification } from '../lib/telegram';
+import SmartPaymentSelector from './SmartPaymentSelector';
 import LocationPicker from './LocationPicker';
+import { generateSmartUSSD, PaymentMethodId } from '../lib/smartPayment';
+import { getStoredGpsCoords, formatGpsLink, isGpsCoordinateLink, GpsCoordinates, resolveOrderGpsLocation } from '../lib/gps';
 
 interface OrderFormProps {
   onSuccess?: () => void;
@@ -18,26 +23,61 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
     food: defaultFood || '',
     address: '',
     notes: '',
-    paymentMethod: 'EVC Plus (712)'
   });
 
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('EVC Plus');
+  const [paymentStatus, setPaymentStatus] = useState<'pay_now' | 'already_paid' | 'cash_on_delivery'>('pay_now');
+  const [transactionId, setTransactionId] = useState('');
+  const [copiedSuccessUssd, setCopiedSuccessUssd] = useState(false);
   const [locationState, setLocationState] = useState<{
     locationLink: string;
     coords: { lat: number; lng: number } | null;
     addressText: string;
-  }>({
-    locationLink: '',
-    coords: null,
-    addressText: '',
+  }>(() => {
+    const stored = getStoredGpsCoords();
+    return {
+      locationLink: stored ? formatGpsLink(stored) : '',
+      coords: stored ? { lat: stored.lat, lng: stored.lng } : null,
+      addressText: '',
+    };
   });
+
+  useEffect(() => {
+    const handleGpsUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<GpsCoordinates>;
+      if (customEvent.detail && customEvent.detail.lat && customEvent.detail.lng) {
+        setLocationState((prev) => ({
+          ...prev,
+          coords: { lat: customEvent.detail.lat, lng: customEvent.detail.lng },
+          locationLink: formatGpsLink(customEvent.detail),
+        }));
+      }
+    };
+    window.addEventListener('baraa_gps_updated', handleGpsUpdate);
+    return () => window.removeEventListener('baraa_gps_updated', handleGpsUpdate);
+  }, []);
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
-  const [lastOrderInfo, setLastOrderInfo] = useState<{ name: string; food: string; code: string; locationLink?: string } | null>(null);
+  const [lastOrderInfo, setLastOrderInfo] = useState<{ 
+    name: string; 
+    food: string; 
+    code: string; 
+    address: string;
+    locationLink?: string;
+    totalAmount?: number;
+    paymentMethod?: string;
+    paymentStatus?: 'pay_now' | 'already_paid' | 'cash_on_delivery';
+    transactionId?: string;
+    paymentUssd?: string;
+  } | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+
+  const matchedItem = MENU_ITEMS.find(m => m.name.toLowerCase() === formData.food.toLowerCase());
+  const currentTotalAmount = matchedItem ? matchedItem.price : 2.50;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +85,8 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
     const name = formData.name.trim();
     const phone = formData.phone.trim();
     const food = formData.food.trim();
-    const address = (locationState.addressText || formData.address).trim();
+    const address = formData.address.trim() || locationState.addressText.trim();
     const notes = formData.notes.trim() || 'Dalab degdeg ah fadlan';
-    const paymentMethod = formData.paymentMethod || 'EVC Plus (712)';
 
     if (!name || !phone || !food) {
       setStatus('error');
@@ -55,9 +94,9 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
       return;
     }
 
-    if (!address && !locationState.locationLink) {
+    if (!address) {
       setStatus('error');
-      setStatusMessage('Fadlan qor ciwaankaaga ama riix badanka GPS-ka si Location-kaaga loo helo.');
+      setStatusMessage('Fadlan qor ciwaankaaga ama degmadaada (Tusaale: Hodan, Taleex, KM4).');
       return;
     }
 
@@ -65,26 +104,29 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
     setStatusMessage('');
 
     const generatedCode = `BR-ORD-${Date.now().toString().slice(-6)}`;
-    const finalLocationLink = locationState.coords
-      ? `https://maps.google.com/?q=${locationState.coords.lat},${locationState.coords.lng}`
-      : (locationState.locationLink || (address ? `https://maps.google.com/?q=${encodeURIComponent(address + ', Mogadishu')}` : ''));
-
-    // Calculate approx price if matches a menu item
-    const matchedItem = MENU_ITEMS.find(m => m.name.toLowerCase() === food.toLowerCase());
-    const totalAmount = matchedItem ? matchedItem.price : 0;
-    const formattedTotal = totalAmount > 0 ? `$${totalAmount.toFixed(2)}` : '$0.50';
+    const totalAmount = currentTotalAmount;
+    const formattedTotal = `$${totalAmount.toFixed(2)}`;
+    const paymentUssd = generateSmartUSSD(paymentMethod, totalAmount);
+    
+    // Resolve GPS coords strictly with smart Mogadishu fallback
+    const resolvedGps = resolveOrderGpsLocation(address, locationState.coords, locationState.locationLink);
+    const finalLocationLink = resolvedGps.link;
+    const finalCoords = resolvedGps.coords;
 
     const orderPayload = {
       customerName: name,
       customerPhone: phone,
       food,
-      address: address || 'Muqdisho',
+      address,
       locationLink: finalLocationLink,
-      coords: locationState.coords,
+      coords: finalCoords,
       notes,
       orderCode: generatedCode,
       orderType: 'delivery',
       paymentMethod,
+      paymentStatus,
+      transactionId,
+      paymentUssd,
       totalAmount,
       total: formattedTotal
     };
@@ -111,9 +153,13 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
           food,
           address,
           locationLink: finalLocationLink,
+          coords: finalCoords,
           orderCode: generatedCode,
           orderType: 'Delivery',
           paymentMethod,
+          paymentStatus,
+          transactionId,
+          paymentUssd,
           total: formattedTotal,
           notes
         });
@@ -121,8 +167,20 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
 
       setStatus('success');
       setStatusMessage('Waad mahadsan tahay! Dalabkaaga si guul leh ayaa loo diray oo loogu helay Telegram-ka.');
-      setLastOrderInfo({ name, food, code: generatedCode, locationLink: finalLocationLink });
-      setFormData({ name: '', phone: '', food: '', address: '', notes: '', paymentMethod: 'EVC Plus (712)' });
+      setLastOrderInfo({ 
+        name, 
+        food, 
+        code: generatedCode, 
+        address,
+        locationLink: finalLocationLink,
+        totalAmount,
+        paymentMethod,
+        paymentStatus,
+        transactionId,
+        paymentUssd
+      });
+      setFormData({ name: '', phone: '', food: '', address: '', notes: '' });
+      setTransactionId('');
       setLocationState({ locationLink: '', coords: null, addressText: '' });
       if (onSuccess) onSuccess();
     } catch (error) {
@@ -135,9 +193,13 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
           food,
           address,
           locationLink: finalLocationLink,
+          coords: finalCoords,
           orderCode: generatedCode,
           orderType: 'Delivery',
           paymentMethod,
+          paymentStatus,
+          transactionId,
+          paymentUssd,
           total: formattedTotal,
           notes
         });
@@ -147,8 +209,20 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
 
       setStatus('success');
       setStatusMessage('Dalabkaaga waa la duubay! Kooxda Baraa Restaurant ayaa kula soo xiriiri doonta.');
-      setLastOrderInfo({ name, food, code: generatedCode, locationLink: finalLocationLink });
-      setFormData({ name: '', phone: '', food: '', address: '', notes: '', paymentMethod: 'EVC Plus (712)' });
+      setLastOrderInfo({ 
+        name, 
+        food, 
+        code: generatedCode, 
+        address,
+        locationLink: finalLocationLink,
+        totalAmount,
+        paymentMethod,
+        paymentStatus,
+        transactionId,
+        paymentUssd
+      });
+      setFormData({ name: '', phone: '', food: '', address: '', notes: '' });
+      setTransactionId('');
       setLocationState({ locationLink: '', coords: null, addressText: '' });
       if (onSuccess) onSuccess();
     }
@@ -164,13 +238,13 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
           </div>
           <div>
             <h3 className="text-lg sm:text-xl font-heading font-bold text-white flex items-center gap-2">
-              Dalab Cunto & Location
+              Dalab Cunto Degdeg Ah
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gold-500/20 text-gold-300 border border-gold-500/40">
                 <Sparkles className="w-3 h-3 mr-1" /> Telegram Alert
               </span>
             </h3>
             <p className="text-xs text-gray-300">
-              Cuntada aad doorato waxaa toos loogu soo dirayaa Telegram oo uu la socdo Location link!
+              Cuntada aad doorato waxaa toos loogu soo dirayaa Telegram-ka maqaayadda!
             </p>
           </div>
         </div>
@@ -251,60 +325,50 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
           </div>
         </div>
 
-        {/* LOCATION SECTION (GPS & Link) */}
-        <div className="pt-1">
+        {/* LOCATION SECTION (GPS & Ciwaan) */}
+        <div>
           <LocationPicker
             locationLink={locationState.locationLink}
             coords={locationState.coords}
-            addressText={locationState.addressText}
+            addressText={locationState.addressText || formData.address}
             onChange={(val) => {
               setLocationState(val);
-              setFormData({ ...formData, address: val.addressText });
+              setFormData((prev) => ({ ...prev, address: val.addressText }));
             }}
             required={true}
+            autoRequest={true}
           />
         </div>
 
-        {/* Payment and Fariin Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-          {/* Payment Method */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5" htmlFor="order-form-payment">
-              <CreditCard className="w-3.5 h-3.5 text-gold-600" />
-              Lacag Bixinta *
-            </label>
-            <select
-              id="order-form-payment"
-              name="paymentMethod"
-              value={formData.paymentMethod}
-              onChange={handleChange}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-gray-200 rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold-500 transition-all"
-            >
-              <option value="EVC Plus (712)">EVC Plus (712)</option>
-              <option value="EVC Plus">EVC Plus</option>
-              <option value="Premier Wallet">Premier Wallet</option>
-              <option value="Zaad">Zaad Service</option>
-              <option value="Sahal">Sahal Service</option>
-              <option value="Cash on Delivery">Kaash marka laguu keeno</option>
-            </select>
-          </div>
+        {/* SMART PAYMENT SECTION */}
+        <div className="pt-1">
+          <SmartPaymentSelector
+            selectedMethod={paymentMethod}
+            onSelectMethod={setPaymentMethod}
+            customerPhone={formData.phone}
+            totalAmount={currentTotalAmount}
+            paymentStatus={paymentStatus}
+            onChangePaymentStatus={setPaymentStatus}
+            transactionId={transactionId}
+            onChangeTransactionId={setTransactionId}
+          />
+        </div>
 
-          {/* Fariin / Customer Notes */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5" htmlFor="order-form-notes">
-              <MessageSquare className="w-3.5 h-3.5 text-gold-600" />
-              Fariin / Codsi Gaar ah
-            </label>
-            <input
-              id="order-form-notes"
-              type="text"
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              placeholder="Tusaale: Dalab degdeg ah fadlan, qolka 5..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500 transition-all"
-            />
-          </div>
+        {/* Fariin / Customer Notes */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5" htmlFor="order-form-notes">
+            <MessageSquare className="w-3.5 h-3.5 text-gold-600" />
+            Fariin / Codsi Gaar ah (Optional)
+          </label>
+          <input
+            id="order-form-notes"
+            type="text"
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            placeholder="Tusaale: Dalab degdeg ah fadlan, maraq dheeri ah..."
+            className="w-full px-3.5 py-2.5 bg-slate-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500 transition-all"
+          />
         </div>
 
         {/* Status notification box if triggered */}
@@ -322,21 +386,67 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
               <p><strong>Code-ka Dalabka:</strong> <span className="font-mono text-gold-700 font-bold">{lastOrderInfo.code}</span></p>
               <p><strong>Macmiilka:</strong> {lastOrderInfo.name}</p>
               <p><strong>Cuntada:</strong> {lastOrderInfo.food}</p>
-              {lastOrderInfo.locationLink && (
-                <p className="flex items-center gap-1.5">
-                  <strong>Location Link:</strong>
-                  <a
-                    href={lastOrderInfo.locationLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gold-700 hover:text-gold-800 underline font-mono text-[11px] truncate inline-flex items-center gap-1"
-                  >
-                    <span>Google Maps</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+              <p><strong>Ciwaanka:</strong> {lastOrderInfo.address}</p>
+              {typeof lastOrderInfo.totalAmount === 'number' && (
+                <p><strong>Qiimaha Guud:</strong> <span className="font-bold text-gold-700">${lastOrderInfo.totalAmount.toFixed(2)}</span></p>
+              )}
+              {lastOrderInfo.paymentMethod && (
+                <p><strong>Lacag Bixinta:</strong> {lastOrderInfo.paymentMethod}</p>
+              )}
+              {lastOrderInfo.paymentStatus === 'already_paid' && (
+                <p className="text-emerald-700 font-semibold">
+                  ✅ Lacagta waad bixisay {lastOrderInfo.transactionId ? `(Tx ID: ${lastOrderInfo.transactionId})` : ''}
+                </p>
+              )}
+              {lastOrderInfo.paymentStatus === 'cash_on_delivery' && (
+                <p className="text-amber-800 font-semibold">
+                  💵 Lacagta caddaan ahaan ayaad u siinaysaa gaarsiiyaha marka cuntada laguu keeno.
                 </p>
               )}
             </div>
+
+            {/* Smart USSD Payment button if pay_now */}
+            {lastOrderInfo.paymentStatus === 'pay_now' && lastOrderInfo.paymentUssd && (
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-center space-y-2">
+                <p className="text-[11px] font-bold text-amber-900 uppercase tracking-wide">
+                  Garaac lambarkan si aad u bixiso (${(lastOrderInfo.totalAmount || 0).toFixed(2)}):
+                </p>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`tel:${encodeURIComponent(lastOrderInfo.paymentUssd)}`}
+                    className="flex-1 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow transition-all"
+                  >
+                    <PhoneCall className="w-3.5 h-3.5" />
+                    <span>Garaac {lastOrderInfo.paymentUssd}</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(lastOrderInfo.paymentUssd || '');
+                        setCopiedSuccessUssd(true);
+                        setTimeout(() => setCopiedSuccessUssd(false), 2000);
+                      } catch {
+                        setCopiedSuccessUssd(true);
+                      }
+                    }}
+                    className="py-2 px-3 bg-white border border-amber-300 text-amber-900 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-amber-50"
+                  >
+                    {copiedSuccessUssd ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Waa la qaaday</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 pt-1">
               <a
@@ -378,7 +488,7 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
           {status === 'loading' ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Fariinta iyo Location-ka ayaa la dirayaa...</span>
+              <span>Dalabkaaga ayaa la dirayaa...</span>
             </>
           ) : (
             <>
@@ -389,10 +499,9 @@ export default function OrderForm({ onSuccess, defaultFood = '', className = '' 
         </button>
 
         <p className="text-[11px] text-gray-400 text-center flex items-center justify-center gap-1">
-          <span>🔒 Dalabkaaga iyo Location Link-ga toos ayay ugu dhacayaan Telegram-ka Maqaayadda.</span>
+          <span>🔒 Dalabkaaga toos ayuu ugu dhacayaa Telegram-ka Maqaayadda.</span>
         </p>
       </form>
     </div>
   );
 }
-

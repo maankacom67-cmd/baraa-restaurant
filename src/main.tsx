@@ -13,80 +13,66 @@ if (rootElement) {
   );
 }
 
-// Progressive Web App (PWA) Service Worker Registration & Instant Update Manager
+// Progressive Web App (PWA) Service Worker Registration & Environment Management
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Only attempt registration in secure contexts or localhost
-    const isLocalhost = Boolean(
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '[::1]' ||
-      window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
-    );
+  const isDevHost = Boolean(
+    !import.meta.env.PROD ||
+    window.location.hostname.includes('run.app') ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.includes('webcontainer')
+  );
 
-    if (window.location.protocol !== 'https:' && !isLocalhost) {
-      console.log('[BARAA PWA] Service Worker requires HTTPS or localhost');
-      return;
+  if (isDevHost) {
+    // In development and preview environments, unregister any active service worker
+    // and purge cache storage to prevent duplicate React instances and stale chunks
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister().catch(() => {});
+      }
+    }).catch(() => {});
+
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        for (const key of keys) {
+          caches.delete(key).catch(() => {});
+        }
+      }).catch(() => {});
     }
-
-    navigator.serviceWorker
-      .register('/sw.js', { scope: '/' })
-      .then((registration) => {
-        console.log('[BARAA PWA] Service Worker registered with scope:', registration.scope);
-
-        // Check for updates on register
-        registration.update().catch(() => {});
-
-        // Listen for new worker installation (new menu, price, or code update published)
-        registration.addEventListener('updatefound', () => {
-          const installingWorker = registration.installing;
-          if (installingWorker) {
-            installingWorker.addEventListener('statechange', () => {
-              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('[BARAA PWA] New update published! Activating immediately...');
-                installingWorker.postMessage({ type: 'SKIP_WAITING' });
-              }
-            });
-          }
+  } else {
+    // Production Service Worker registration (e.g. Netlify custom domain)
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/sw.js', { scope: '/' })
+        .then((registration) => {
+          registration.update().catch(() => {});
+          registration.addEventListener('updatefound', () => {
+            const installingWorker = registration.installing;
+            if (installingWorker) {
+              installingWorker.addEventListener('statechange', () => {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  installingWorker.postMessage({ type: 'SKIP_WAITING' });
+                }
+              });
+            }
+          });
+        })
+        .catch((err) => {
+          console.warn('[BARAA PWA] Service Worker registration skipped:', err);
         });
-      })
-      .catch((err) => {
-        console.warn('[BARAA PWA] Service Worker registration skipped/failed:', err);
-      });
 
-    // Handle seamless refresh only when an existing service worker is replaced by a newer one
-    let hadController = Boolean(navigator.serviceWorker.controller);
-    let isRefreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!hadController) {
-        // Initial installation and claim - do NOT reload the active page
-        hadController = true;
-        return;
-      }
-      if (!isRefreshing) {
-        isRefreshing = true;
-        console.log('[BARAA PWA] App updated to latest version.');
-        window.location.reload();
-      }
-    });
-
-    // Check for updates periodically (every 15 minutes)
-    setInterval(() => {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        reg?.update().catch(() => {});
-      });
-    }, 15 * 60 * 1000);
-
-    // Check for updates when user refocuses the app or regains internet connection
-    window.addEventListener('focus', () => {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        reg?.update().catch(() => {});
+      let hadController = Boolean(navigator.serviceWorker.controller);
+      let isRefreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController) {
+          hadController = true;
+          return;
+        }
+        if (!isRefreshing) {
+          isRefreshing = true;
+          window.location.reload();
+        }
       });
     });
-
-    window.addEventListener('online', () => {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        reg?.update().catch(() => {});
-      });
-    });
-  });
+  }
 }

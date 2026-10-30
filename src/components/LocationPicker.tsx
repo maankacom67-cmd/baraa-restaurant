@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Navigation, CheckCircle2, AlertCircle, RefreshCw, ExternalLink, Compass, ShieldCheck } from 'lucide-react';
+import { 
+  MapPin, Navigation, CheckCircle2, AlertCircle, RefreshCw, X, 
+  HelpCircle, Compass, ChevronRight, ExternalLink, Info 
+} from 'lucide-react';
+import { 
+  getStoredGpsCoords, 
+  saveGpsCoords, 
+  formatGpsLink, 
+  requestGpsLocation, 
+  silentCheckGps,
+  MOGADISHU_DISTRICTS,
+  DistrictPreset,
+  GpsCoordinates,
+  matchMogadishuDistrict
+} from '../lib/gps';
 
 export interface LocationPickerValue {
   locationLink: string;
@@ -12,15 +26,12 @@ interface LocationPickerProps {
   locationLink: string;
   coords?: { lat: number; lng: number } | null;
   addressText: string;
-  onChange: (value: {
-    locationLink: string;
-    coords: { lat: number; lng: number } | null;
-    addressText: string;
-    accuracy?: number;
-  }) => void;
+  onChange: (value: LocationPickerValue) => void;
   required?: boolean;
   disabled?: boolean;
   autoRequest?: boolean;
+  placeholder?: string;
+  label?: string;
 }
 
 export default function LocationPicker({
@@ -31,313 +42,460 @@ export default function LocationPicker({
   required = true,
   disabled = false,
   autoRequest = true,
+  placeholder = 'Qor ciwaankaaga (Tusaale: Macaane, Hodan, KM4...)',
+  label = 'Goobtaada / Ciwaanka (Delivery Address)',
 }: LocationPickerProps) {
   const [isLocating, setIsLocating] = useState(false);
-  const [permissionState, setPermissionState] = useState<'idle' | 'locating' | 'granted' | 'denied' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const [accuracy, setAccuracy] = useState<number | null>(null);
-  const [detectedPlace, setDetectedPlace] = useState<string>('');
-  const hasAutoRequested = useRef(false);
+  const [showPermissionGuide, setShowPermissionGuide] = useState(false);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [selectedDistrictName, setSelectedDistrictName] = useState<string>('');
+  const hasAutoChecked = useRef(false);
 
-  // Sync state if already has coordinates
+  // Synchronize with stored coordinates and listen to global GPS updates
   useEffect(() => {
-    if (coords && locationLink) {
-      setPermissionState('granted');
-    }
-  }, [coords, locationLink]);
-
-  // Automatically request GPS position when component mounts (when customer starts ordering)
-  useEffect(() => {
-    if (autoRequest && !coords && !locationLink && !hasAutoRequested.current && !disabled) {
-      hasAutoRequested.current = true;
-      requestCurrentLocation();
-    }
-  }, [autoRequest, coords, locationLink, disabled]);
-
-  const fetchPlaceName = async (lat: number, lng: number) => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
-        {
-          headers: {
-            'Accept-Language': 'so,en',
-          },
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.address) {
-          const parts = [
-            data.address.suburb || data.address.neighbourhood || data.address.road,
-            data.address.city || data.address.town || data.address.county || 'Mogadishu',
-          ].filter(Boolean);
-          if (parts.length > 0) {
-            const place = parts.join(', ');
-            setDetectedPlace(place);
-            return place;
-          }
-        }
+    // 1. If no coords yet in props, check stored GPS
+    if (!coords) {
+      const stored = getStoredGpsCoords();
+      if (stored && stored.lat && stored.lng) {
+        onChange({
+          locationLink: formatGpsLink(stored),
+          coords: { lat: stored.lat, lng: stored.lng },
+          addressText: addressText || '',
+          accuracy: stored.accuracy,
+        });
+        return;
       }
-    } catch {
-      // Non-critical fallback
     }
-    return '';
-  };
 
-  const requestCurrentLocation = () => {
-    if (disabled) return;
+    // 2. Listen to background/global GPS updates
+    const handleGpsUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<GpsCoordinates>;
+      if (customEvent.detail && customEvent.detail.lat && customEvent.detail.lng) {
+        onChange({
+          locationLink: formatGpsLink(customEvent.detail),
+          coords: { lat: customEvent.detail.lat, lng: customEvent.detail.lng },
+          addressText: addressText || '',
+          accuracy: customEvent.detail.accuracy,
+        });
+      }
+    };
 
-    if (!('geolocation' in navigator)) {
-      setPermissionState('error');
-      setErrorMessage('Aaladdaada ama browser-kaan ma taageerayo GPS Location. Fadlan gacanta ku qor ciwaankaaga.');
-      return;
+    window.addEventListener('baraa_gps_updated', handleGpsUpdate);
+
+    // 3. Silent auto-check: Only query if permission is ALREADY granted to prevent scaring user with errors
+    if (autoRequest && !coords && !disabled && !hasAutoChecked.current) {
+      hasAutoChecked.current = true;
+      silentCheckGps().then((detected) => {
+        if (detected) {
+          onChange({
+            locationLink: formatGpsLink(detected),
+            coords: { lat: detected.lat, lng: detected.lng },
+            addressText: addressText || '',
+            accuracy: detected.accuracy,
+          });
+        }
+      }).catch(() => {
+        // Silently ignore background check failures on mount
+      });
     }
+
+    return () => {
+      window.removeEventListener('baraa_gps_updated', handleGpsUpdate);
+    };
+  }, [coords, disabled, autoRequest]);
+
+  // Explicit user-triggered GPS request
+  const triggerGpsRequest = async () => {
+    if (disabled || isLocating) return;
 
     setIsLocating(true);
-    setPermissionState('locating');
     setErrorMessage('');
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        setIsLocating(false);
-        const lat = Number(position.coords.latitude.toFixed(6));
-        const lng = Number(position.coords.longitude.toFixed(6));
-        const acc = Math.round(position.coords.accuracy || 0);
-        setAccuracy(acc);
+    try {
+      const detected = await requestGpsLocation();
+      setIsLocating(false);
+      setErrorMessage('');
+      setSelectedDistrictName('');
 
-        const generatedLink = `https://maps.google.com/?q=${lat},${lng}`;
-        setPermissionState('granted');
-        setErrorMessage('');
-
-        // Try getting friendly location name
-        const place = await fetchPlaceName(lat, lng);
-        const bestAddress = addressText || place || `Muqdisho (GPS: ${lat}, ${lng})`;
-
+      onChange({
+        locationLink: formatGpsLink(detected),
+        coords: { lat: detected.lat, lng: detected.lng },
+        addressText: addressText.trim() ? addressText : 'Goobta tooska ah ee GPS-ka (Muqdisho)',
+        accuracy: detected.accuracy,
+      });
+    } catch (err: any) {
+      setIsLocating(false);
+      
+      // Auto-fallback: If user already typed or selected a Mogadishu area, use its coords smoothly
+      const matched = matchMogadishuDistrict(addressText);
+      if (matched) {
+        const coordsObj = { lat: matched.lat, lng: matched.lng };
+        saveGpsCoords(coordsObj);
+        setSelectedDistrictName(matched.name);
         onChange({
-          locationLink: generatedLink,
-          coords: { lat, lng },
-          addressText: bestAddress,
-          accuracy: acc,
+          locationLink: formatGpsLink(coordsObj),
+          coords: coordsObj,
+          addressText: addressText,
+          accuracy: 50,
         });
-      },
-      (error) => {
-        setIsLocating(false);
-        setPermissionState('denied');
-
-        if (error.code === error.PERMISSION_DENIED) {
-          setErrorMessage(
-            'Waxaad diiday fasaxa Location-ka (GPS). Maqaayaddu waxay u baahan tahay meesha aad hadda joogto si cuntada toos laguguugu keeno.'
-          );
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          setErrorMessage(
-            'GPS-kaaga lama heli karin. Fadlan hubi in Location/GPS-ka taleefankaagu shidan yahay, kadibna dib u tijaabi.'
-          );
-        } else if (error.code === error.TIMEOUT) {
-          setErrorMessage('Waqtigii raadinta GPS-ka wuu dhacay. Fadlan riix badanka si aad dib ugu tijaabiso.');
+        setErrorMessage('');
+      } else {
+        if (err?.code === 1) { // PERMISSION_DENIED
+          setErrorMessage('Fasaxa GPS-ka biraawsarka waa la diiday. Dooro xaafaddaada hoose ama qor ciwaanka.');
+        } else if (err?.code === 2) { // POSITION_UNAVAILABLE
+          setErrorMessage('GPS-ka lama heli karin hadda. Dooro xaafaddaada hoos ama qor ciwaanka.');
         } else {
-          setErrorMessage('Khalad ayaa dhacay xilliga raadinta Location-ka. Fadlan isku day mar kale.');
+          setErrorMessage('GPS-ka taleefanka lama helin. Dooro xaafaddaada hoose ama qor ciwaanka.');
         }
-      },
-      {
-        enableHighAccuracy: true, // Guarantees highest physical GPS accuracy from real device
-        timeout: 15000,
-        maximumAge: 0, // Never use stale/cached coordinates, always take current real location
       }
-    );
+    }
   };
 
   const handleAddressTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newText = e.target.value;
-    const fallbackLink = coords
-      ? locationLink
-      : newText.trim()
-      ? `https://maps.google.com/?q=${encodeURIComponent(newText.trim() + ', Mogadishu, Somalia')}`
-      : '';
+
+    // Check if user has active GPS sensor coordinates
+    let activeCoords = coords || getStoredGpsCoords();
+
+    // If no hardware GPS sensor active, match district name from typed text automatically
+    const matched = !activeCoords ? matchMogadishuDistrict(newText) : null;
+    if (matched) {
+      activeCoords = { lat: matched.lat, lng: matched.lng };
+      setSelectedDistrictName(matched.name);
+      setErrorMessage('');
+    }
+
+    const gpsLink = activeCoords && activeCoords.lat && activeCoords.lng 
+      ? formatGpsLink(activeCoords) 
+      : (newText ? `https://maps.google.com/?q=${encodeURIComponent(newText + ', Mogadishu, Somalia')}` : '');
 
     onChange({
-      locationLink: coords ? locationLink : fallbackLink,
-      coords: coords || null,
+      locationLink: gpsLink,
+      coords: activeCoords ? { lat: activeCoords.lat, lng: activeCoords.lng } : null,
       addressText: newText,
-      accuracy: accuracy || undefined,
     });
   };
 
-  const resetLocation = () => {
-    setPermissionState('idle');
+  const handleSelectDistrict = (district: DistrictPreset) => {
+    setSelectedDistrictName(district.name);
     setErrorMessage('');
-    setAccuracy(null);
-    setDetectedPlace('');
+
+    const coordsObj = { lat: district.lat, lng: district.lng };
+    saveGpsCoords(coordsObj);
+
+    // Keep user's custom details if they already typed something specific, or formulate clean address
+    const newAddress = addressText.trim() && !addressText.toLowerCase().includes(district.name.toLowerCase())
+      ? `${district.name}, ${addressText.trim()}`
+      : `${district.name}, ${district.subTitle}, Muqdisho`;
+
     onChange({
-      locationLink: '',
+      locationLink: formatGpsLink(coordsObj),
+      coords: coordsObj,
+      addressText: newAddress,
+      accuracy: 50,
+    });
+  };
+
+  const clearGPS = () => {
+    setErrorMessage('');
+    setSelectedDistrictName('');
+    try {
+      localStorage.removeItem('baraa_saved_gps_location');
+      sessionStorage.removeItem('baraa_saved_gps_location');
+      if (window.__BARAA_GPS_COORDS__) {
+        window.__BARAA_GPS_COORDS__ = null;
+      }
+    } catch {}
+
+    onChange({
+      locationLink: addressText ? `https://maps.google.com/?q=${encodeURIComponent(addressText + ', Mogadishu, Somalia')}` : '',
       coords: null,
       addressText: addressText || '',
     });
-    // Re-request fresh
-    setTimeout(() => {
-      requestCurrentLocation();
-    }, 100);
   };
 
+  const hasCoords = Boolean(coords && coords.lat && coords.lng);
+
   return (
-    <div className="space-y-3" id="location-picker-container">
-      {/* Header */}
+    <div className="space-y-2" id="compact-location-picker">
+      {/* Sleek Label & Status Header */}
       <div className="flex items-center justify-between">
-        <label className="block text-[11px] font-sans font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-          <MapPin className="w-4 h-4 text-gold-600 animate-pulse" />
-          <span>Goobtaada Saxda ah (Meesha aad hadda joogto) {required ? '*' : ''}</span>
+        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-1.5" htmlFor="location-address-input">
+          <MapPin className="w-3.5 h-3.5 text-gold-600" />
+          <span>{label} {required ? '*' : ''}</span>
         </label>
-        {coords && (
-          <span className="text-[10px] font-mono text-emerald-800 font-bold bg-emerald-100/90 px-2 py-0.5 rounded border border-emerald-300 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Goobta waa la qabtay
+        {hasCoords ? (
+          <span className="text-[10px] font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> GPS Diyaar ah
+          </span>
+        ) : (
+          <span className="text-[10px] text-slate-400 font-sans">
+            Muqdisho & nawaaxigeeda
           </span>
         )}
       </div>
 
-      {/* State 1: Locating in progress */}
-      {isLocating && (
-        <div className="p-3.5 bg-gold-50/80 border border-gold-300 rounded-lg flex items-center gap-3 animate-pulse">
-          <RefreshCw className="w-5 h-5 text-gold-600 animate-spin shrink-0" />
-          <div className="text-xs text-gold-950">
-            <p className="font-bold">Raadinaya meesha aad joogto (GPS)...</p>
-            <p className="text-[11px] text-gold-800">Fadlan ogolow haddii browser-ku ku weydiiyo fasax (Allow Location).</p>
-          </div>
-        </div>
-      )}
+      {/* Input Field with Small Embedded GPS Icon Button */}
+      <div className="relative flex items-center">
+        <input
+          id="location-address-input"
+          type="text"
+          value={addressText}
+          onChange={handleAddressTextChange}
+          placeholder={placeholder}
+          required={required}
+          disabled={disabled}
+          className="w-full pl-3.5 pr-28 py-2.5 bg-slate-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent transition-all"
+        />
 
-      {/* State 2: Location Granted with exact coords */}
-      {permissionState === 'granted' && coords && !isLocating && (
-        <div className="p-3.5 bg-emerald-50 border-2 border-emerald-400/80 rounded-lg space-y-2.5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-emerald-900 text-xs font-bold">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Meesha aad joogto waa la sugay (GPS Live)</span>
+        {/* Action Button: GPS request */}
+        <button
+          type="button"
+          onClick={triggerGpsRequest}
+          disabled={disabled || isLocating}
+          title={hasCoords ? "GPS waa la qabtay. Riix si aad mar kale u cusboonaysiiso." : "Riix si aad GPS toos ugu qaadato"}
+          className={`absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+            hasCoords
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 shadow-xs'
+              : isLocating
+              ? 'bg-gold-50 text-gold-800 border-gold-300 animate-pulse'
+              : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 hover:border-gold-400 shadow-xs'
+          }`}
+        >
+          {isLocating ? (
+            <RefreshCw className="w-3.5 h-3.5 animate-spin text-gold-600" />
+          ) : hasCoords ? (
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          ) : (
+            <Navigation className="w-3.5 h-3.5 text-gold-600" />
+          )}
+          <span className="text-[11px] font-bold">
+            {isLocating ? 'Raadin...' : hasCoords ? 'GPS ✓' : 'GPS'}
+          </span>
+        </button>
+      </div>
+
+      {/* Quick Mogadishu Neighborhood Chips (One-Tap Selection) */}
+      <div className="space-y-1 pt-0.5">
+        <div className="flex items-center justify-between text-[11px] text-slate-500 font-sans">
+          <span className="flex items-center gap-1 font-medium">
+            <Compass className="w-3 h-3 text-gold-600" /> Dooro Xaafaddaada degdeg:
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowMapModal(true)}
+            className="text-[10px] text-gold-700 font-bold hover:text-gold-900 underline flex items-center gap-0.5 cursor-pointer"
+          >
+            <span>Khariidadda</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+          {MOGADISHU_DISTRICTS.slice(0, 7).map((d) => (
+            <button
+              key={d.name}
+              type="button"
+              onClick={() => handleSelectDistrict(d)}
+              className={`px-2.5 py-1 rounded-full whitespace-nowrap transition-all border text-[11px] font-medium cursor-pointer ${
+                selectedDistrictName === d.name || addressText.toLowerCase().includes(d.name.toLowerCase())
+                  ? 'bg-gold-500 text-primary-950 border-gold-600 font-bold shadow-xs'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-gold-400 hover:bg-slate-50'
+              }`}
+            >
+              📍 {d.name}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setShowMapModal(true)}
+            className="px-2 py-1 rounded-full whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 text-[11px] font-medium cursor-pointer"
+          >
+            + Xaafado kale
+          </button>
+        </div>
+      </div>
+
+      {/* Active GPS status banner OR Friendly Permission Guidance */}
+      {hasCoords ? (
+        <div className="flex items-center justify-between text-[11px] text-emerald-800 bg-emerald-50/80 border border-emerald-200 rounded px-2.5 py-1.5">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Goobtaada GPS waa la qabtay si toos ah (Google Maps diyaar ah)</span>
+          </span>
+          <button
+            type="button"
+            onClick={clearGPS}
+            className="text-slate-400 hover:text-rose-600 flex items-center gap-0.5 cursor-pointer transition-colors text-[10px]"
+            title="Ka saar GPS-ka"
+          >
+            <X className="w-3 h-3" />
+            <span>Tir</span>
+          </button>
+        </div>
+      ) : errorMessage ? (
+        <div className="p-2.5 bg-amber-50/90 border border-amber-200 rounded-md text-amber-900 text-xs space-y-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-1.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] leading-relaxed">{errorMessage}</p>
             </div>
             <button
               type="button"
-              onClick={resetLocation}
-              className="text-[10px] font-semibold text-emerald-800 hover:text-emerald-950 underline flex items-center gap-1 cursor-pointer"
-              title="Cusboonaysii GPS-ka"
+              onClick={() => setErrorMessage('')}
+              className="text-slate-400 hover:text-slate-600 cursor-pointer"
             >
-              <RefreshCw className="w-3 h-3" />
-              <span>Dib u cusboonaysii</span>
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="bg-white/95 p-2.5 rounded border border-emerald-200 text-xs space-y-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] text-slate-600 font-medium">Coordinates:</span>
-              <span className="font-mono text-[11px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-                📍 {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
-              </span>
-            </div>
+          <div className="flex items-center gap-3 pt-1 border-t border-amber-200/60 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setShowPermissionGuide(true)}
+              className="font-bold text-gold-800 hover:text-gold-950 underline flex items-center gap-1 cursor-pointer"
+            >
+              <HelpCircle className="w-3.5 h-3.5" /> Sida loo ogolaado GPS-ka
+            </button>
+            <button
+              type="button"
+              onClick={triggerGpsRequest}
+              className="font-bold text-amber-900 hover:text-amber-950 underline cursor-pointer"
+            >
+              Isku day mar kale
+            </button>
+          </div>
+        </div>
+      ) : null}
 
-            {accuracy !== null && (
-              <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
-                <span>Saxnaanta GPS (Accuracy):</span>
-                <span className="font-semibold text-emerald-700">±{accuracy} mitir meeshaada</span>
-              </div>
-            )}
-
-            {detectedPlace && (
-              <div className="flex items-center justify-between gap-2 text-[11px] text-slate-700 pt-0.5 border-t border-slate-100">
-                <span className="text-slate-500 text-[10px]">Agagaarka:</span>
-                <span className="font-semibold text-slate-900 truncate max-w-[220px] sm:max-w-[300px]">
-                  {detectedPlace}
-                </span>
-              </div>
-            )}
-
-            <div className="pt-1 flex items-center justify-between border-t border-slate-100">
-              <span className="text-[10px] text-slate-500 font-medium">Link-ga Telegram loo dirayo:</span>
-              <a
-                href={locationLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] font-bold text-gold-700 hover:text-gold-900 underline flex items-center gap-1"
+      {/* Chrome Permission Modal / Helper */}
+      {showPermissionGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary-950/70 backdrop-blur-xs">
+          <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-2xl border border-gold-500/20 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <h4 className="text-sm font-bold text-primary-950 flex items-center gap-1.5">
+                <Navigation className="w-4 h-4 text-gold-600" /> Sida loo shido GPS-ka Chrome-ka
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShowPermissionGuide(false)}
+                className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
               >
-                <span>Fur Google Maps</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-700 leading-relaxed">
+              <div className="flex gap-2.5 items-start">
+                <span className="w-5 h-5 rounded-full bg-gold-100 text-gold-800 font-bold flex items-center justify-center shrink-0 text-[11px]">1</span>
+                <p>Taabo calaamadda <strong>🔒 Qufulka</strong> ama astaanta goobta ee ku taal bar-ka sare ee Chrome (URL-ka agtiisa).</p>
+              </div>
+
+              <div className="flex gap-2.5 items-start">
+                <span className="w-5 h-5 rounded-full bg-gold-100 text-gold-800 font-bold flex items-center justify-center shrink-0 text-[11px]">2</span>
+                <p>Guji <strong>Permissions (Fasaxyada)</strong> kadibna dooro <strong>Location (Goobta)</strong>.</p>
+              </div>
+
+              <div className="flex gap-2.5 items-start">
+                <span className="w-5 h-5 rounded-full bg-gold-100 text-gold-800 font-bold flex items-center justify-center shrink-0 text-[11px]">3</span>
+                <p>Ka dhig <strong>Allow (Ogolow)</strong> si biraawsarku u ogaado meesha aad joogto.</p>
+              </div>
+
+              <div className="flex gap-2.5 items-start">
+                <span className="w-5 h-5 rounded-full bg-gold-100 text-gold-800 font-bold flex items-center justify-center shrink-0 text-[11px]">4</span>
+                <p>Halkaan ku soo laabo oo riix batoonka <strong>"Isku day mar kale"</strong>.</p>
+              </div>
+
+              <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2">
+                <Info className="w-4 h-4 text-slate-400 shrink-0" />
+                <span>Haddii aadan rabin inaad GPS shiddo, wax dhib ah ma leh: kaliya qor ciwaankaaga ama dooro xaafadaha hoose.</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPermissionGuide(false);
+                  triggerGpsRequest();
+                }}
+                className="flex-1 py-2 px-3 bg-gold-500 hover:bg-gold-600 text-primary-950 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+              >
+                Isku day mar kale
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPermissionGuide(false)}
+                className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors cursor-pointer"
+              >
+                Waan fahmay
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* State 3: Denied or error - Prompts customer clearly to enable */}
-      {permissionState === 'denied' && !isLocating && (
-        <div className="p-3.5 bg-rose-50 border-2 border-rose-300 rounded-lg space-y-3 animate-in fade-in duration-200">
-          <div className="flex items-start gap-2.5 text-rose-900 text-xs">
-            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-rose-950 text-sm">Fadlan Ogolow Location-kaaga!</p>
-              <p className="text-[11px] text-rose-800 mt-0.5">{errorMessage}</p>
+      {/* Extended Mogadishu Neighborhood / Map Selector Modal */}
+      {showMapModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary-950/70 backdrop-blur-xs">
+          <div className="bg-white rounded-xl max-w-md w-full p-5 shadow-2xl border border-gold-500/20 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <h4 className="text-sm font-bold text-primary-950 flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-gold-600" /> Dooro Xaafaddaada Muqdisho
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShowMapModal(false)}
+                className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
-          </div>
 
-          <div className="bg-white p-2.5 rounded border border-rose-200 text-[11px] text-slate-700 space-y-1">
-            <p className="font-bold text-slate-900 flex items-center gap-1">
-              <span>💡</span> <span>Sidee loo ogolaadaa?</span>
+            <p className="text-xs text-slate-500">
+              Guji meesha aad joogto si loogu hagaajiyo khariidadda GPS-ka tooska ah:
             </p>
-            <ol className="list-decimal list-inside text-[10.5px] text-slate-600 space-y-0.5">
-              <li>Riix badanka <strong>"Ogolow Location-kaaga"</strong> ee hoose.</li>
-              <li>Marka uu browser-ku ku weydiiyo, dooro <strong>"Allow" ama "Ogolow"</strong>.</li>
-              <li>Haddii uu xiran yahay, taabo calaamadda qufulka 🔒 ee xagga sare ee browser-ka si aad u fasaxdo.</li>
-            </ol>
+
+            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-100">
+              {MOGADISHU_DISTRICTS.map((d) => (
+                <button
+                  key={d.name}
+                  type="button"
+                  onClick={() => {
+                    handleSelectDistrict(d);
+                    setShowMapModal(false);
+                  }}
+                  className="w-full py-2.5 px-3 rounded-lg text-left hover:bg-gold-50/70 transition-all flex items-center justify-between group cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-full bg-gold-100 text-gold-800 flex items-center justify-center group-hover:bg-gold-500 group-hover:text-primary-950 transition-colors">
+                      <MapPin className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-primary-950">{d.name}</p>
+                      <p className="text-[10px] text-slate-500">{d.subTitle}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono group-hover:text-gold-700">
+                    Dooro →
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowMapModal(false)}
+                className="py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+              >
+                Xidh
+              </button>
+            </div>
           </div>
-
-          <button
-            type="button"
-            onClick={requestCurrentLocation}
-            className="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white rounded-md text-xs font-bold tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow"
-          >
-            <Navigation className="w-4 h-4" />
-            <span>📍 Ogolow Location-kaaga (Isku day mar kale)</span>
-          </button>
         </div>
       )}
-
-      {/* State 4: Idle (not yet prompted or waiting) */}
-      {permissionState === 'idle' && !isLocating && (
-        <div className="p-3 bg-slate-50 border border-slate-300 rounded-lg space-y-2">
-          <p className="text-[11px] text-slate-700 leading-snug">
-            Waxaan u baahanahay <strong>meesha aad hadda joogto (GPS)</strong> si cuntada toos looguugu keeno goobtaada saxda ah:
-          </p>
-
-          <button
-            type="button"
-            onClick={requestCurrentLocation}
-            disabled={disabled}
-            className="w-full py-2.5 px-4 bg-primary-900 hover:bg-primary-950 text-gold-400 rounded-md text-xs font-sans font-bold tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-[0.99]"
-          >
-            <Navigation className="w-4 h-4 text-gold-400" />
-            <span>📍 Soo qaad Meesha aan Joogo (GPS Link)</span>
-          </button>
-        </div>
-      )}
-
-      {/* Complementary Address Input */}
-      <div>
-        <label className="block text-[10.5px] font-sans font-semibold text-slate-600 mb-1" htmlFor="location-address-text">
-          {coords
-            ? 'Faahfaahin dheeri ah (Guri lambar, Xaafad, ama meel caan ah oo kuu dhow):'
-            : 'Ama qor Xaafadda / Meesha aad joogto gacanta:'}
-        </label>
-        <div className="relative">
-          <input
-            id="location-address-text"
-            type="text"
-            value={addressText}
-            onChange={handleAddressTextChange}
-            placeholder={
-              coords
-                ? 'Tusaale: Guri #14, ka soo horjeedka Masjidka...'
-                : 'Tusaale: Degmada Hodan, agagaarka Taleex, Muqdisho'
-            }
-            className="w-full bg-slate-50 text-xs p-2.5 pr-8 rounded border border-gray-200 focus:outline-none focus:border-gold-500 transition-colors"
-          />
-          <Compass className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
-      </div>
     </div>
   );
 }

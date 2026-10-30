@@ -3,8 +3,17 @@ import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 
+process.on('uncaughtException', (err) => {
+  console.error('[Server Uncaught Exception]', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server Unhandled Rejection]', reason);
+});
+
 const app = express();
-const PORT = 3000;
+const portArgIndex = process.argv.indexOf('--port');
+const portFromArg = portArgIndex !== -1 && process.argv[portArgIndex + 1] ? parseInt(process.argv[portArgIndex + 1], 10) : null;
+const PORT = portFromArg || 3000;
 
 // Body parsing middleware
 app.use(express.json());
@@ -221,11 +230,56 @@ app.post('/api/orders', async (req, res) => {
   const orders = readJSON(ORDERS_FILE);
   const orderCode = orderData.orderCode || `BR-ORD-${Date.now().toString().slice(-6)}`;
   
-  const locationLink = orderData.locationLink || 
-    (orderData.coords ? `https://maps.google.com/?q=${orderData.coords.lat},${orderData.coords.lng}` : 
-    (address && address !== 'Muqdisho' ? `https://maps.google.com/?q=${encodeURIComponent(address + ', Mogadishu')}` : ''));
+  const coords = (orderData.coords && orderData.coords.lat && orderData.coords.lng) ? orderData.coords : null;
+  const isDirectGpsLink = (link: string | undefined): boolean => {
+    return Boolean(link && /maps\.google\.com\/\?q=-?\d+(\.\d+)?,-?\d+(\.\d+)?/.test(link));
+  };
 
-  const userNotes = orderData.notes || orderData.cartNotes || orderData.requests || (address && address !== 'Muqdisho' ? address : 'Mani jiro');
+  const MOGADISHU_PRESETS: Record<string, { lat: number; lng: number }> = {
+    taleex: { lat: 2.0435, lng: 45.3115 },
+    km4: { lat: 2.0470, lng: 45.3180 },
+    hodan: { lat: 2.0510, lng: 45.3130 },
+    macaane: { lat: 2.0410, lng: 45.3410 },
+    banaadir: { lat: 2.0520, lng: 45.3050 },
+    digfeer: { lat: 2.0520, lng: 45.3050 },
+    bakaaro: { lat: 2.0450, lng: 45.3300 },
+    howlwadaag: { lat: 2.0440, lng: 45.3280 },
+    waberi: { lat: 2.0280, lng: 45.3210 },
+    wadajir: { lat: 2.0250, lng: 45.2850 },
+    medina: { lat: 2.0250, lng: 45.2850 },
+    madiina: { lat: 2.0250, lng: 45.2850 },
+    liido: { lat: 2.0480, lng: 45.3620 },
+    dayniile: { lat: 2.0710, lng: 45.2750 },
+    yaaqshiid: { lat: 2.0650, lng: 45.3450 },
+    karaan: { lat: 2.0580, lng: 45.3720 },
+    zoobe: { lat: 2.0495, lng: 45.3140 },
+    zobe: { lat: 2.0495, lng: 45.3140 },
+    dharkeynley: { lat: 2.0180, lng: 45.2670 },
+  };
+
+  const lowerAddress = (address || '').toLowerCase();
+  let matchedDistrictCoords: { lat: number; lng: number } | null = null;
+  for (const [key, val] of Object.entries(MOGADISHU_PRESETS)) {
+    if (lowerAddress.includes(key)) {
+      matchedDistrictCoords = val;
+      break;
+    }
+  }
+
+  const finalMapLink = coords 
+    ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` 
+    : (isDirectGpsLink(orderData.locationLink) 
+      ? orderData.locationLink 
+      : (matchedDistrictCoords
+        ? `https://maps.google.com/?q=${matchedDistrictCoords.lat},${matchedDistrictCoords.lng}`
+        : (address && address !== 'Muqdisho' ? `https://maps.google.com/?q=${encodeURIComponent(address + ', Mogadishu, Somalia')}` : 'https://maps.google.com/?q=Mogadishu%2C%20Somalia')));
+
+  const locationLink = finalMapLink;
+  const userNotes = orderData.notes || orderData.cartNotes || orderData.requests || 'Mani jiro';
+
+  const paymentStatus = orderData.paymentStatus || 'pay_now';
+  const transactionId = orderData.transactionId || '';
+  const paymentUssd = orderData.paymentUssd || '';
 
   const newOrder = {
     id: orderData.id || Math.random().toString(36).substring(2, 9),
@@ -233,11 +287,14 @@ app.post('/api/orders', async (req, res) => {
     customerPhone,
     address,
     locationLink,
-    coords: orderData.coords || null,
+    coords,
     notes: userNotes,
     food: foodItem,
     orderType: orderData.orderType || 'takeaway',
     paymentMethod: orderData.paymentMethod || 'EVC Plus',
+    paymentStatus,
+    transactionId,
+    paymentUssd,
     items: orderData.items || [{ name: foodItem, quantity: 1, price: totalAmount }],
     totalAmount,
     date: orderData.date || new Date().toLocaleDateString('so-SO'),
@@ -255,16 +312,18 @@ app.post('/api/orders', async (req, res) => {
   let telegramSent = false;
   if (shouldSendOrderAlert(dedupeKey)) {
     const formattedTotal = totalAmount > 0 ? `$${totalAmount.toFixed(2)}` : (orderData.total || '$0.00');
+
     const tgHtml =
       `🍽️ <b>DALAB CUSUB - BARAA RESTAURANT</b>\n\n` +
       `👤 <b>Magaca:</b> ${escapeHtml(customerName)}\n` +
       `📞 <b>Taleefanka:</b> ${escapeHtml(customerPhone)}\n` +
+      `🏠 <b>Ciwaanka:</b> ${escapeHtml(address || 'Muqdisho')}\n` +
       `🍲 <b>Cuntada / Items:</b> ${escapeHtml(foodItem)}\n` +
       `💰 <b>Qiimaha:</b> ${escapeHtml(formattedTotal)}\n` +
       `💳 <b>Lacag Bixinta:</b> ${escapeHtml(newOrder.paymentMethod)}\n` +
       `🏷️ <b>Code:</b> ${escapeHtml(orderCode)}\n` +
-      `📝 <b>Fariin:</b> ${escapeHtml(userNotes)}\n` +
-      (locationLink ? `\n📍 <b>Location-ka:</b> ${escapeHtml(locationLink)}` : '');
+      `📝 <b>Fariin:</b> ${escapeHtml(userNotes)}\n\n` +
+      `📍 <b>Location-ka:</b> ${finalMapLink}`;
 
     sendTelegramAlert(tgHtml).catch(() => {});
     telegramSent = true;
@@ -275,26 +334,36 @@ app.post('/api/orders', async (req, res) => {
 
 // Dedicated Telegram API endpoints for direct triggers
 app.post('/api/telegram/order', async (req, res) => {
-  const { name, phone, food, address, locationLink, total, paymentMethod, orderCode, notes } = req.body;
+  const { name, phone, food, address, locationLink, coords, total, paymentMethod, orderCode, notes } = req.body;
   const dedupeKey = orderCode || `${phone}_${food}_${total}`;
   if (!shouldSendOrderAlert(dedupeKey)) {
     return res.json({ success: true, deduplicated: true });
   }
 
   const formattedTotal = typeof total === 'number' ? `$${total.toFixed(2)}` : (total || '$0.00');
-  const userNotes = notes || (address && address !== 'Muqdisho' ? address : 'Mani jiro');
-  const linkText = locationLink || (address && address !== 'Muqdisho' ? `https://maps.google.com/?q=${encodeURIComponent(address + ', Mogadishu')}` : '');
+  const userNotes = notes || 'Mani jiro';
+
+  const isDirectGpsLink = (link: string | undefined): boolean => {
+    return Boolean(link && /maps\.google\.com\/\?q=-?\d+(\.\d+)?,-?\d+(\.\d+)?/.test(link));
+  };
+
+  const finalMapLink = (coords && coords.lat && coords.lng)
+    ? `https://maps.google.com/?q=${coords.lat},${coords.lng}`
+    : (isDirectGpsLink(locationLink)
+      ? locationLink
+      : (address && address !== 'Muqdisho' ? `https://maps.google.com/?q=${encodeURIComponent(address + ', Mogadishu, Somalia')}` : 'https://maps.google.com/?q=Mogadishu%2C%20Somalia'));
 
   const tgHtml =
     `🍽️ <b>DALAB CUSUB - BARAA RESTAURANT</b>\n\n` +
     `👤 <b>Magaca:</b> ${escapeHtml(name || 'Macmiil')}\n` +
     `📞 <b>Taleefanka:</b> ${escapeHtml(phone || 'Aan la sheegin')}\n` +
+    `🏠 <b>Ciwaanka:</b> ${escapeHtml(address || 'Muqdisho')}\n` +
     `🍲 <b>Cuntada / Items:</b> ${escapeHtml(food || 'Aan la sheegin')}\n` +
     `💰 <b>Qiimaha:</b> ${escapeHtml(formattedTotal)}\n` +
     `💳 <b>Lacag Bixinta:</b> ${escapeHtml(paymentMethod || 'EVC Plus')}\n` +
     `🏷️ <b>Code:</b> ${escapeHtml(orderCode || 'BR-ORD-123456')}\n` +
-    `📝 <b>Fariin:</b> ${escapeHtml(userNotes)}\n` +
-    (linkText ? `\n📍 <b>Location-ka:</b> ${escapeHtml(linkText)}` : '');
+    `📝 <b>Fariin:</b> ${escapeHtml(userNotes)}\n\n` +
+    `📍 <b>Location-ka:</b> ${finalMapLink}`;
 
   const sent = await sendTelegramAlert(tgHtml);
   res.json({ success: sent });
@@ -417,6 +486,8 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Baraa Backend DB Server] Live on http://0.0.0.0:${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    console.log(`  ➜  Local:   http://localhost:${PORT}/`);
+    console.log(`  ➜  Network: http://0.0.0.0:${PORT}/`);
   });
 }
 

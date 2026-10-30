@@ -18,8 +18,20 @@ import OfflineIndicator from './components/OfflineIndicator';
 import { MENU_ITEMS } from './data';
 import { Smartphone, Download, Zap, Wifi } from 'lucide-react';
 
+import { silentCheckGps, getStoredGpsCoords } from './lib/gps';
+
 export default function App() {
   const [currentTab, setCurrentTab] = useState<'home' | 'menu' | 'about' | 'book' | 'reviews'>('home');
+
+  // Hubi haddii horey fasax loo bixiyay ama goob la keydiyay (aan dadka la dhibin)
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      const stored = getStoredGpsCoords();
+      if (!stored) {
+        silentCheckGps().catch(() => {});
+      }
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col justify-between relative">

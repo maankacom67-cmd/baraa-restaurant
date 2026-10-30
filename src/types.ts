@@ -60,6 +60,9 @@ export interface Order {
   food: string;
   orderType: 'delivery' | 'takeaway';
   paymentMethod: string;
+  paymentStatus?: 'pay_now' | 'already_paid' | 'cash_on_delivery' | string;
+  transactionId?: string;
+  paymentUssd?: string;
   items?: any[];
   totalAmount: number;
   date?: string;

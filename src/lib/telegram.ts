@@ -1,3 +1,5 @@
+import { resolveOrderGpsLocation } from './gps';
+
 export const TELEGRAM_BOT_TOKEN = '8992339748:AAHVoYo1Mfwpqp3dW4E070mkahSWALqfbdw';
 export const TELEGRAM_CHAT_ID = '7718402252';
 
@@ -7,9 +9,13 @@ export interface TelegramOrderPayload {
   food: string;
   address?: string;
   locationLink?: string;
+  coords?: { lat: number; lng: number } | null;
   total?: string | number;
   orderType?: string;
   paymentMethod?: string;
+  paymentStatus?: string;
+  transactionId?: string;
+  paymentUssd?: string;
   orderCode?: string;
   notes?: string;
 }
@@ -56,24 +62,27 @@ export async function sendTelegramOrderNotification(payload: TelegramOrderPayloa
   }
 
   // 2. Direct browser fallback (for static deployment environments)
-  const { name, phone, food, address, locationLink, total, paymentMethod, orderCode, notes } = payload;
+  const { name, phone, food, address, locationLink, coords, total, paymentMethod, paymentStatus, transactionId, paymentUssd, orderCode, notes } = payload;
   const botToken = TELEGRAM_BOT_TOKEN;
   const chatId = TELEGRAM_CHAT_ID;
 
   const formattedTotal = typeof total === 'number' ? `$${total.toFixed(2)}` : (total || '$0.00');
-  const userNotes = notes || (address ? address : 'Mani jiro');
-  const linkText = locationLink || (address ? `https://maps.google.com/?q=${encodeURIComponent(address)}` : '');
+  const userNotes = notes || 'Mani jiro';
+
+  const resolvedGps = resolveOrderGpsLocation(address || '', coords, locationLink);
+  const finalMapLink = resolvedGps.link;
 
   const htmlMessage =
     `🍽️ <b>DALAB CUSUB - BARAA RESTAURANT</b>\n\n` +
     `👤 <b>Magaca:</b> ${escapeHtml(name || 'Macmiil')}\n` +
     `📞 <b>Taleefanka:</b> ${escapeHtml(phone || 'Aan la sheegin')}\n` +
+    `🏠 <b>Ciwaanka:</b> ${escapeHtml(address || 'Muqdisho')}\n` +
     `🍲 <b>Cuntada / Items:</b> ${escapeHtml(food || 'Aan la sheegin')}\n` +
     `💰 <b>Qiimaha:</b> ${escapeHtml(formattedTotal)}\n` +
     `💳 <b>Lacag Bixinta:</b> ${escapeHtml(paymentMethod || 'EVC Plus')}\n` +
     `🏷️ <b>Code:</b> ${escapeHtml(orderCode || 'BR-ORD-123456')}\n` +
-    `📝 <b>Fariin:</b> ${escapeHtml(userNotes)}\n` +
-    (linkText ? `\n📍 <b>Location-ka:</b> ${escapeHtml(linkText)}` : '');
+    `📝 <b>Fariin:</b> ${escapeHtml(userNotes)}\n\n` +
+    `📍 <b>Location-ka:</b> ${finalMapLink}`;
 
   try {
     const postRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

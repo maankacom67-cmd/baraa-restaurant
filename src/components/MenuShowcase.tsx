@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Heart, Star, Sparkles, X, ShoppingCart, MessageSquare, 
   MapPin, Phone, ShoppingBag, CreditCard, CheckCircle2, ArrowLeft, 
-  Mail, PhoneCall, AlertCircle, Settings, Plus, Minus, Check, Trash2, ExternalLink
+  Mail, PhoneCall, AlertCircle, Settings, Plus, Minus, Check, Trash2, ExternalLink,
+  Copy, ShieldCheck, Banknote
 } from 'lucide-react';
 import { MENU_ITEMS, CATEGORIES } from '../data';
 import { MenuItem } from '../types';
@@ -11,7 +12,10 @@ import emailjs from '@emailjs/browser';
 import { sendOrderToFirebase, handleOrderSubmit } from '../lib/firebase';
 import { sendTelegramOrderNotification, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from '../lib/telegram';
 import OrderForm from './OrderForm';
-import LocationPicker from './LocationPicker';
+import SmartPaymentSelector from './SmartPaymentSelector';
+import LocationPicker, { LocationPickerValue } from './LocationPicker';
+import { generateSmartUSSD, PaymentMethodId } from '../lib/smartPayment';
+import { getStoredGpsCoords, formatGpsLink, isGpsCoordinateLink, GpsCoordinates, resolveOrderGpsLocation } from '../lib/gps';
 
 interface MenuShowcaseProps {
   onBookClick: () => void;
@@ -40,21 +44,44 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [cartLocationState, setCartLocationState] = useState<{
-    locationLink: string;
-    coords: { lat: number; lng: number } | null;
-    addressText: string;
-  }>({
-    locationLink: '',
-    coords: null,
-    addressText: '',
-  });
   const [orderType, setOrderType] = useState<'delivery' | 'takeaway'>('delivery');
-  const [paymentMethod, setPaymentMethod] = useState<'EVC Plus' | 'Zaad' | 'Sahal'>('EVC Plus');
+  const [cartLocationState, setCartLocationState] = useState<LocationPickerValue>(() => {
+    const stored = getStoredGpsCoords();
+    return {
+      locationLink: stored ? formatGpsLink(stored) : '',
+      coords: stored ? { lat: stored.lat, lng: stored.lng } : null,
+      addressText: '',
+      accuracy: stored?.accuracy,
+    };
+  });
+
+  // Synchronize cart location state whenever global GPS is updated
+  React.useEffect(() => {
+    const handleGpsUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<GpsCoordinates>;
+      if (customEvent.detail && customEvent.detail.lat && customEvent.detail.lng) {
+        setCartLocationState((prev) => ({
+          ...prev,
+          coords: { lat: customEvent.detail.lat, lng: customEvent.detail.lng },
+          locationLink: formatGpsLink(customEvent.detail),
+          accuracy: customEvent.detail.accuracy,
+        }));
+      }
+    };
+
+    window.addEventListener('baraa_gps_updated', handleGpsUpdate);
+    return () => window.removeEventListener('baraa_gps_updated', handleGpsUpdate);
+  }, []);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('EVC Plus');
+  const [paymentStatus, setPaymentStatus] = useState<'pay_now' | 'already_paid' | 'cash_on_delivery'>('pay_now');
+  const [transactionId, setTransactionId] = useState('');
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderEmailStatus, setOrderEmailStatus] = useState<'idle' | 'success' | 'error' | 'not_configured'>('idle');
   const [placedOrderDetails, setPlacedOrderDetails] = useState<any | null>(null);
+  const [receiptCopied, setReceiptCopied] = useState(false);
   const [showQuickOrderModal, setShowQuickOrderModal] = useState(false);
+  const [modalQuantity, setModalQuantity] = useState(1);
+  const [cartError, setCartError] = useState('');
 
   // Helper: Add Item to Cart
   const addToCart = (item: MenuItem, qty: number = 1, notes: string = '') => {
@@ -107,9 +134,6 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
     );
   };
 
-  const [modalQuantity, setModalQuantity] = useState(1);
-  const [cartError, setCartError] = useState('');
-
   // Handle selected item reset
   const handleItemSelect = (item: MenuItem) => {
     setSelectedItem(item);
@@ -142,8 +166,8 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
     e.preventDefault();
     setCartError('');
     if (cart.length === 0) return;
-    if (orderType === 'delivery' && !deliveryAddress.trim() && !cartLocationState.locationLink && !cartLocationState.addressText.trim()) {
-      setCartError('Fadlan qor ciwaankaaga ama riix badanka GPS si Location-kaaga loo helo.');
+    if (orderType === 'delivery' && !deliveryAddress.trim()) {
+      setCartError('Fadlan qor ciwaankaaga ama degmadaada (Tusaale: Hodan, Taleex, KM4).');
       return;
     }
     if (!customerPhone.trim()) {
@@ -176,13 +200,15 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
 
     const finalAddress = orderType === 'takeaway' 
       ? 'Maqaayada ayaan imaanayaa (Takeaway)' 
-      : (cartLocationState.addressText || deliveryAddress || 'Muqdisho');
+      : (cartLocationState.addressText || deliveryAddress.trim());
 
-    const finalLocationLink = orderType === 'takeaway'
-      ? ''
-      : (cartLocationState.coords
-          ? `https://maps.google.com/?q=${cartLocationState.coords.lat},${cartLocationState.coords.lng}`
-          : (cartLocationState.locationLink || (finalAddress && finalAddress !== 'Muqdisho' ? `https://maps.google.com/?q=${encodeURIComponent(finalAddress + ', Mogadishu')}` : '')));
+    // Strict GPS resolution: check hardware coordinates, then smart Mogadishu district matching
+    const resolvedGps = orderType === 'takeaway'
+      ? { link: '', coords: null }
+      : resolveOrderGpsLocation(finalAddress, cartLocationState.coords, cartLocationState.locationLink);
+
+    const finalLocationLink = resolvedGps.link;
+    const finalCoords = resolvedGps.coords;
 
     // Build the HTML-formatted table string for cart items exactly as requested
     let cunnooyinHTML = "";
@@ -214,18 +240,23 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
       </table>
     `;
 
+    const paymentUssd = generateSmartUSSD(paymentMethod, totalAmount);
+
     const orderDetails = {
       id: Math.random().toString(36).substring(2, 9),
       customerName: customerName || 'Macmiil',
       customerPhone,
       deliveryAddress: finalAddress,
       locationLink: finalLocationLink,
-      coords: cartLocationState.coords,
+      coords: finalCoords,
       itemName: itemsBrief,
       itemPrice: 0,
       quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
       totalAmount,
       paymentMethod,
+      paymentStatus,
+      transactionId,
+      paymentUssd,
       orderCode,
       createdAt,
       cartNotes: cartNotes || 'Ma jiraan codsiyo gaar ah'
@@ -300,11 +331,14 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
           customerPhone: orderDetails.customerPhone,
           address: orderDetails.deliveryAddress,
           locationLink: finalLocationLink,
-          coords: cartLocationState.coords,
+          coords: finalCoords,
           notes: cartNotes || 'Mani jiro',
           food: foodSummary,
           orderType,
           paymentMethod,
+          paymentStatus,
+          transactionId,
+          paymentUssd,
           items: cart,
           totalAmount,
           orderCode,
@@ -327,9 +361,13 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
           food: foodSummary,
           address: finalAddress,
           locationLink: finalLocationLink,
+          coords: finalCoords,
           total: `$${totalAmount.toFixed(2)}`,
           orderType: orderType === 'takeaway' ? 'Takeaway' : 'Delivery',
           paymentMethod: paymentMethod,
+          paymentStatus: paymentStatus,
+          transactionId: transactionId,
+          paymentUssd: paymentUssd,
           orderCode: orderCode,
           notes: cartNotes || 'Mani jiro'
         });
@@ -377,6 +415,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
     }
 
     setPlacedOrderDetails(orderDetails);
+    setTransactionId('');
     setIsSubmittingOrder(false);
   };
 
@@ -867,23 +906,27 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                         <span className="text-slate-500">Taleefanka:</span>
                         <span className="font-semibold text-slate-800 text-right">{placedOrderDetails.customerPhone}</span>
 
-                        <span className="text-slate-500">Meesha la gaynayo (Location):</span>
+                        <span className="text-slate-500">Meesha la gaynayo (Ciwaanka):</span>
                         <span className="font-semibold text-slate-800 text-right">{placedOrderDetails.deliveryAddress}</span>
 
-                        {placedOrderDetails.locationLink && (
+                        <span className="text-slate-500">Lacag Bixinta:</span>
+                        <span className="font-semibold text-slate-800 text-right">{placedOrderDetails.paymentMethod || 'EVC Plus'}</span>
+
+                        <span className="text-slate-500">Xaaladda Lacagta:</span>
+                        <span className="font-semibold text-right">
+                          {placedOrderDetails.paymentStatus === 'already_paid' ? (
+                            <span className="text-emerald-700 font-bold">✅ Waan Bixiyay</span>
+                          ) : placedOrderDetails.paymentStatus === 'cash_on_delivery' ? (
+                            <span className="text-amber-800 font-bold">💵 Kaash (Marka la keeno)</span>
+                          ) : (
+                            <span className="text-primary-900 font-bold">📱 USSD Diyaar ah</span>
+                          )}
+                        </span>
+
+                        {placedOrderDetails.transactionId && (
                           <>
-                            <span className="text-slate-500">Location Link:</span>
-                            <span className="text-right">
-                              <a 
-                                href={placedOrderDetails.locationLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-gold-700 hover:text-gold-800 underline font-mono text-[11px] inline-flex items-center gap-1"
-                              >
-                                <span>Google Maps Link</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            </span>
+                            <span className="text-slate-500">Tixraaca (Tx ID):</span>
+                            <span className="font-mono font-bold text-slate-800 text-right">{placedOrderDetails.transactionId}</span>
                           </>
                         )}
 
@@ -892,18 +935,82 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                       </div>
                     </div>
 
-                    {/* USSD Direct Call button section */}
-                    <div className="bg-amber-50 border border-amber-200 p-4 rounded space-y-2.5 text-center">
-                      <p className="text-xs font-sans font-bold text-amber-800 uppercase tracking-wider">Guji badanka hoose si aad u bixiso kharashka:</p>
-                      <a 
-                        href={`tel:*712*771909054*${Math.round(placedOrderDetails.totalAmount)}%23`}
-                        className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-sans font-bold text-sm tracking-wider px-6 py-3 rounded shadow-sm hover:shadow-md transition-all cursor-pointer w-full justify-center"
-                      >
-                        <PhoneCall className="w-4 h-4 animate-bounce" />
-                        GARAAC *712*771909054*{Math.round(placedOrderDetails.totalAmount)}#
-                      </a>
-                      <span className="text-[10px] text-amber-700 block">Sitoos ah ayuu kuugu geynayaa fariinta wicitaanka taleefankaaga hadda.</span>
-                    </div>
+                    {/* Dynamic Smart Payment Action on Receipt */}
+                    {placedOrderDetails.paymentStatus === 'already_paid' ? (
+                      <div className="bg-emerald-50 border border-emerald-300 p-4 rounded-lg text-center space-y-1.5">
+                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 mb-0.5">
+                          <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-bold text-emerald-900">Lacagta waa la duubay (Waan Bixiyay)</p>
+                        <p className="text-[11px] text-emerald-800">
+                          Dalabkaaga waxaa toos loogu gudbiyay jikada si degdeg ah loogu diyaariyo.
+                          {placedOrderDetails.transactionId && <span> Tixraac: <strong>{placedOrderDetails.transactionId}</strong></span>}
+                        </p>
+                      </div>
+                    ) : placedOrderDetails.paymentStatus === 'cash_on_delivery' ? (
+                      <div className="bg-stone-50 border border-stone-300 p-4 rounded-lg text-center space-y-1.5">
+                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-stone-200 text-stone-700 mb-0.5">
+                          <Banknote className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-bold text-stone-900">Lacag Bixin Kaash ah (Cash on Delivery)</p>
+                        <p className="text-[11px] text-stone-700">
+                          Waxaad lacagta dhan <strong>${placedOrderDetails.totalAmount.toFixed(2)}</strong> caddaan ahaan u siinaysaa darawalka marka uu cuntada kuu keeno.
+                        </p>
+                      </div>
+                    ) : (
+                      /* USSD Direct Call & Copy for the chosen provider */
+                      <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg space-y-2.5 text-center">
+                        <p className="text-xs font-sans font-bold text-amber-900 uppercase tracking-wider">
+                          Guji badanka hoose si aad u bixiso kharashka ({placedOrderDetails.paymentMethod || 'EVC Plus'}):
+                        </p>
+                        
+                        <div className="bg-white/90 p-2.5 rounded border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+                          <code className="text-amber-900 font-mono font-bold text-sm sm:text-base select-all tracking-wider">
+                            {placedOrderDetails.paymentUssd || `*712*771909054*${Math.round(placedOrderDetails.totalAmount) || 1}#`}
+                          </code>
+                          
+                          <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(placedOrderDetails.paymentUssd || '');
+                                  setReceiptCopied(true);
+                                  setTimeout(() => setReceiptCopied(false), 2000);
+                                } catch {
+                                  setReceiptCopied(true);
+                                }
+                              }}
+                              className="flex-1 sm:flex-initial py-1.5 px-2.5 bg-white hover:bg-amber-50 text-amber-900 border border-amber-300 rounded text-xs font-bold flex items-center justify-center gap-1 transition-all"
+                            >
+                              {receiptCopied ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Waa la qaaday</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 text-amber-700" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+
+                            <a 
+                              href={`tel:${encodeURIComponent(placedOrderDetails.paymentUssd || `*712*771909054*${Math.round(placedOrderDetails.totalAmount) || 1}#`)}`}
+                              className="flex-1 sm:flex-initial inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-sans font-bold text-xs tracking-wider px-3.5 py-1.5 rounded shadow-sm hover:shadow transition-all cursor-pointer justify-center"
+                            >
+                              <PhoneCall className="w-3.5 h-3.5 animate-bounce" />
+                              <span>GARAAC HADDA</span>
+                            </a>
+                          </div>
+                        </div>
+
+                        <span className="text-[10px] text-amber-800 block">
+                          Sitoos ah ayuu kuugu geynayaa fariinta wicitaanka taleefankaaga adigoon wax qalad ah gelin.
+                        </span>
+                      </div>
+                    )}
 
                     <button
                       onClick={() => {
@@ -1043,7 +1150,7 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                         </div>
                       </div>
                       
-                      {/* Location / Takeaway Info */}
+                      {/* Delivery Address / Takeaway Info */}
                       {orderType === 'delivery' ? (
                         <div>
                           <LocationPicker
@@ -1055,11 +1162,12 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                               setDeliveryAddress(val.addressText);
                             }}
                             required={true}
+                            autoRequest={true}
                           />
                         </div>
                       ) : (
                         <div className="bg-amber-50/70 border border-amber-100 p-3 rounded-md flex items-start gap-2 text-amber-900 text-[11px] font-sans">
-                          <span className="text-base shrink-0">📍</span>
+                          <span className="text-base shrink-0">🍽️</span>
                           <span>Cuntada waxaa laguugu diyaarin doonaa <strong>Maqaayada Barada</strong> si aad adigu halkaas uga qaadato marka ay diyaar noqoto.</span>
                         </div>
                       )}
@@ -1096,35 +1204,19 @@ export default function MenuShowcase({ onBookClick }: MenuShowcaseProps) {
                         </div>
                       </div>
 
-                      {/* Payment Method */}
+                      {/* SMART PAYMENT SECTION */}
                       <div>
-                        <label className="block text-[11px] font-sans font-bold text-gray-700 mb-1 flex items-center gap-1">
-                          <CreditCard className="w-3.5 h-3.5 text-gold-600" />
-                          💳 Qaybta Lacag Bixinta *
-                        </label>
-                        <select
-                          value={paymentMethod}
-                          onChange={(e) => setPaymentMethod(e.target.value as any)}
-                          className="w-full p-2.5 bg-slate-50 border rounded text-xs focus:outline-none focus:border-gold-500 transition-colors"
-                        >
-                          <option value="EVC Plus">EVC Plus</option>
-                          <option value="Zaad">Zaad</option>
-                          <option value="Sahal">Sahal</option>
-                        </select>
+                        <SmartPaymentSelector
+                          selectedMethod={paymentMethod}
+                          onSelectMethod={setPaymentMethod}
+                          customerPhone={customerPhone}
+                          totalAmount={cart.reduce((sum, item) => sum + item.item.price * item.quantity, 0)}
+                          paymentStatus={paymentStatus}
+                          onChangePaymentStatus={setPaymentStatus}
+                          transactionId={transactionId}
+                          onChangeTransactionId={setTransactionId}
+                        />
                       </div>
-
-                      {/* Live Interactive USSD payment advice */}
-                      {customerPhone && (
-                        <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1.5 text-[10px] text-slate-600 leading-normal">
-                          <span className="font-bold text-slate-800 block text-[9px] tracking-wide uppercase">XAQIIJINTA USSD CODE KA</span>
-                          <p>
-                            Markaad gujiso badanka hoose, fadlan garaac lambarkan si aad u bixiso xaddiga guud ee ah <strong className="text-gold-700">${cart.reduce((sum, item) => sum + item.item.price * item.quantity, 0).toFixed(2)}</strong>:
-                          </p>
-                          <code className="block bg-slate-100 p-1.5 rounded text-center text-slate-800 font-bold text-xs font-mono">
-                            *712*771909054*{Math.round(cart.reduce((sum, item) => sum + item.item.price * item.quantity, 0))}#
-                          </code>
-                        </div>
-                      )}
 
                       {/* Cart error notice if validation fails */}
                       {cartError && (
